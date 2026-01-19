@@ -3,14 +3,21 @@ import './App.css'
 import UserList from './components/UserList'
 import SignalementList from './components/SignalementList'
 import Login from './components/Login'
+import VisitorDashboard from './components/VisitorDashboard'
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
   const [activeTab, setActiveTab] = useState('users')
 
-  // Afficher la page de login si pas connecté
+  // Afficher le login si demandé
+  if (showLogin && !isLoggedIn) {
+    return <Login onBack={() => setShowLogin(false)} onLoginSuccess={() => { setIsLoggedIn(true); setShowLogin(false); }} />
+  }
+
+  // Afficher le dashboard visiteur si pas connecté
   if (!isLoggedIn) {
-    return <Login />
+    return <VisitorDashboard onLoginClick={() => setShowLogin(true)} />
   }
 
   return (

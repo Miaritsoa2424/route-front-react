@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import '../styles/Login.css';
 
-export default function Login() {
+export default function Login({ onBack, onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -42,6 +42,9 @@ export default function Login() {
       setTimeout(() => {
         console.log('Connexion réussie');
         setLoading(false);
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
       }, 1000);
     } catch (err) {
       setError('Erreur de connexion. Veuillez réessayer.');
@@ -51,6 +54,11 @@ export default function Login() {
 
   return (
     <div className="login-container">
+      {onBack && (
+        <button className="back-button" onClick={onBack}>
+          ← Retour au dashboard
+        </button>
+      )}
       <div className="login-card">
         <div className="login-header">
           <h1>Bienvenue</h1>
