@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signalementService, signalementStatutService } from '../services/api';
 import '../styles/Manager.css';
 
 export default function Manager() {
   const navigate = useNavigate();
   const [signalements, setSignalements] = useState([]);
+  const [originalSignalements, setOriginalSignalements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
@@ -17,90 +19,44 @@ export default function Manager() {
     loadSignalements();
   }, []);
 
-  // Charger les signalements depuis l'API/Firebase
+  // Charger les signalements depuis l'API
   const loadSignalements = async () => {
     setLoading(true);
     try {
-      // À remplacer par votre appel API Firebase
-      // const response = await fetch('/api/signalements');
-      // const data = await response.json();
+      const response = await signalementService.getAllSignalements();
       
-      // Données factices pour la démo
-      const demoData = [
-        {
-          id: 1,
-          type: 'Nid de poule',
-          date: '2024-01-15',
-          status: 'nouveau',
-          surface: 25,
-          budget: 5000000,
-          entreprise: 'RoadFix Mada',
-          localisation: 'Antananarivo - Route de l\'Aéroport',
-          description: 'Nid de poule dangereux causant des ralentissements'
-        },
-        {
-          id: 2,
-          type: 'Fissure importante',
-          date: '2024-01-10',
-          status: 'en_cours',
-          surface: 15,
-          budget: 3000000,
-          entreprise: 'TechRoad',
-          localisation: 'Antsirabe - Route RN1',
-          description: 'Fissure s\'élargissant progressivement'
-        },
-        {
-          id: 3,
-          type: 'Dégradation massive',
-          date: '2024-01-05',
-          status: 'planifie',
-          surface: 85,
-          budget: 12000000,
-          entreprise: 'RoadRepair Pro',
-          localisation: 'Morondava - Route côtière',
-          description: 'Importante dégradation du revêtement routier'
-        },
-        {
-          id: 4,
-          type: 'Affaissement',
-          date: '2024-01-08',
-          status: 'complete',
-          surface: 30,
-          budget: 4500000,
-          entreprise: 'RoadFix Mada',
-          localisation: 'Toliara - Route vers Bekily',
-          description: 'Affaissement du sol causé par infiltration d\'eau'
-        }
-      ];
+      setOriginalSignalements(response);
       
-      setSignalements(demoData);
+      // Mapper les données de l'API au format attendu
+      const mappedData = response.map(signalement => ({
+        id: signalement.idSignalement,
+        type: 'Signalement routier', // Valeur par défaut
+        date: new Date().toISOString().split('T')[0], // Date actuelle par défaut
+        status: 'nouveau', // Statut par défaut
+        surface: signalement.surface,
+        budget: signalement.budget,
+        entreprise: signalement.entreprise.nom,
+        localisation: `${signalement.latitude}, ${signalement.longitude}`,
+        description: `Signalement par ${signalement.user.identifiant}`
+      }));
+      
+      setSignalements(mappedData);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
+      setSuccessMessage('Erreur lors du chargement des signalements');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } finally {
       setLoading(false);
     }
   };
 
-  // Synchroniser avec Firebase
+  // Synchroniser avec l'API
   const handleSync = async () => {
     setSyncing(true);
     try {
-      // À remplacer par votre logique Firebase
-      // 1. Récupérer les nouveaux signalements
-      // const newData = await fetchFromFirebase();
-      // 2. Envoyer les données mises à jour
-      // await sendToFirebase(signalements);
-      
-      console.log('Synchronisation en cours...');
-      
-      // Simulation d'une synchronisation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setSuccessMessage('Synchronisation réussie avec Firebase');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      
-      // Recharger les données après sync
       await loadSignalements();
+      setSuccessMessage('Données rechargées depuis l\'API');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Erreur de synchronisation:', error);
     } finally {
@@ -120,26 +76,39 @@ export default function Manager() {
     setEditFormData({});
   };
 
-  // Sauvegarder les modifications
+  // Sauvegarder les modifications (insère un nouveau signalement statut)
   const handleSaveEdit = async () => {
     try {
-      // À remplacer par votre appel API
-      // await fetch(`/api/signalements/${editingId}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(editFormData)
-      // });
+      // Mapper le statut à l'id
+      const statusMap = {
+        'nouveau': 1,
+        'en_cours': 2,
+        'planifie': 3,
+        'complete': 4
+      };
+      const idStatut = statusMap[editFormData.status] || 1;
       
-      setSignalements(signalements.map(s => 
-        s.id === editingId ? editFormData : s
-      ));
+      const newSignalementStatut = {
+        dateStatut: new Date().toISOString(),
+        user: { idUser: 1 }, // Utilisateur connecté, à adapter
+        statutSignalement: { idStatut: idStatut },
+        signalement: { idSignalement: editingId }
+      };
+      
+      // Insérer un nouveau signalement statut via l'API
+      await signalementStatutService.createSignalementStatut(newSignalementStatut);
+      
+      // Recharger les données
+      await loadSignalements();
       
       setEditingId(null);
       setEditFormData({});
-      setSuccessMessage('Signalement mis à jour avec succès');
+      setSuccessMessage('Nouveau statut créé avec succès');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
+      console.error('Erreur lors de la création:', error);
+      setSuccessMessage('Erreur lors de la création');
+      setTimeout(() => setSuccessMessage(''), 3000);
     }
   };
 
@@ -197,7 +166,7 @@ export default function Manager() {
           onClick={handleSync}
           disabled={syncing || loading}
         >
-          {syncing ? 'Synchronisation en cours...' : 'Synchroniser avec Firebase'}
+          {syncing ? 'Rechargement en cours...' : 'Recharger les données'}
         </button>
       </div>
 
