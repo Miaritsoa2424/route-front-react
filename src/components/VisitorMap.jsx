@@ -241,15 +241,31 @@ export default function VisitorMap() {
                   key={problem.id}
                   position={[problem.lat, problem.lng]}
                   icon={createCustomIcon(problem.status)}
+                  eventHandlers={{
+                    mouseover: (e) => e.target.openPopup(),
+                    mouseout: (e) => e.target.closePopup(),
+                    click: (e) => e.target.openPopup()
+                  }}
                 >
                   <Popup className="custom-popup">
                     <div className="popup-content">
                       <div className="popup-header">
                         <h3 className="popup-title">{problem.type}</h3>
-                        <span className={`popup-status status-${problem.status}`}>
-                          {getStatusIcon(problem.status)}
-                          {getStatusLabel(problem.status)}
-                        </span>
+                        {/* Normalize status into a safe CSS class name */}
+                        {(() => {
+                          const map = {
+                            'nouveau': 'nouveau',
+                            'en cours': 'en-cours',
+                            'terminé': 'termine'
+                          };
+                          const statusClass = map[problem.status] || problem.status.replace(/\s+/g, '-');
+                          return (
+                            <span className={`popup-status status-${statusClass}`}>
+                              {getStatusIcon(problem.status)}
+                              {getStatusLabel(problem.status)}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <div className="popup-body">
                         <div className="popup-row">
