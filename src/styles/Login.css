@@ -3,22 +3,124 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-image: 
-    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
-    /* url('https://images.unsplash.com/photo-1533929736458-ca588d08c8be?q=80&w=2070'); */
-    url('/src/assets/road-bg.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
+  padding: 20px;
 }
 
+/* ============ PROFILE SELECTION ============ */
+.profile-selection {
+  max-width: 1200px;
+  width: 100%;
+  animation: slideUp 0.5s ease-out;
+}
+
+.profile-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.profile-header h1 {
+  margin: 0;
+  color: #1a2332;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+
+.profile-header p {
+  margin: 12px 0 0 0;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.profile-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 28px;
+}
+
+.profile-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.profile-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  border-color: #cbd5e1;
+}
+
+.profile-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.profile-card h2 {
+  margin: 0 0 12px 0;
+  color: #1a2332;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+
+.profile-description {
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+  min-height: 48px;
+}
+
+.profile-feature {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 16px 0;
+}
+
+.profile-button {
+  width: 100%;
+  padding: 13px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 12px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.profile-button:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+  transform: translateY(-2px);
+}
+
+/* ============ LOGIN / SIGNUP CARD ============ */
 .login-card {
-  /* Effet glassmorphism pour transparence élégante */
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -29,6 +131,27 @@
   max-width: 440px;
   padding: 48px 40px;
   animation: slideUp 0.5s ease-out;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
 }
 
 @keyframes slideUp {
@@ -59,6 +182,10 @@
   margin: 8px 0 0 0;
   color: #64748b;
   font-size: 15px;
+}
+
+.login-header strong {
+  color: #3b82f6;
 }
 
 .login-form {
@@ -113,42 +240,28 @@
   border-radius: 8px;
   font-size: 14px;
   border-left: 3px solid #dc2626;
+  animation: slideDown 0.3s ease-out;
 }
 
-.form-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.success-message {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  padding: 12px 14px;
+  border-radius: 8px;
   font-size: 14px;
-  margin-top: 4px;
+  border-left: 3px solid #16a34a;
+  animation: slideDown 0.3s ease-out;
 }
 
-.remember-me {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #475569;
-  user-select: none;
-}
-
-.remember-me input {
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-  accent-color: #3b82f6;
-}
-
-.forgot-password {
-  color: #3b82f6;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.forgot-password:hover {
-  color: #2563eb;
-  text-decoration: underline;
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .login-button {
@@ -191,43 +304,96 @@
   color: #64748b;
 }
 
-.login-footer a {
+.login-footer p {
+  margin: 0;
+}
+
+.link-button {
+  background: none;
+  border: none;
   color: #3b82f6;
   text-decoration: none;
   font-weight: 600;
+  cursor: pointer;
   transition: color 0.2s ease;
+  padding: 0;
+  font-size: inherit;
 }
 
-.login-footer a:hover {
+.link-button:hover {
   color: #2563eb;
   text-decoration: underline;
 }
 
-/* Responsive */
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1024px) {
+  .profile-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
+  .login-container {
+    padding: 16px;
+  }
+
+  .profile-header h1 {
+    font-size: 26px;
+  }
+
   .login-card {
     padding: 40px 32px;
-    margin: 20px;
+    margin: 0;
   }
   
   .login-header h1 {
     font-size: 24px;
   }
+
+  .profile-card {
+    padding: 32px 24px;
+  }
 }
 
 @media (max-width: 480px) {
+  .login-container {
+    padding: 12px;
+  }
+
+  .profile-header h1 {
+    font-size: 22px;
+  }
+
+  .profile-header p {
+    font-size: 14px;
+  }
+
   .login-card {
     padding: 32px 24px;
-    margin: 16px;
+    margin: 0;
   }
   
   .login-header h1 {
     font-size: 22px;
   }
-  
-  .form-options {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+
+  .back-button {
+    top: 16px;
+    left: 16px;
+    font-size: 14px;
+  }
+
+  .profile-card {
+    padding: 24px 20px;
+  }
+
+  .profile-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+  }
+
+  .profile-card h2 {
+    font-size: 20px;
   }
 }
