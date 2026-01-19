@@ -5,8 +5,8 @@
   min-height: 100vh;
   background-image: 
     linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
-    url('https://images.unsplash.com/photo-1533929736458-ca588d08c8be?q=80&w=2070');
-    /* url('/src/assets/routes.jpg'); */
+    /* url('https://images.unsplash.com/photo-1533929736458-ca588d08c8be?q=80&w=2070'); */
+    url('/src/assets/road-bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
