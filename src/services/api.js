@@ -175,3 +175,18 @@ export const avancementService = {
     await fetch(`${API_BASE_URL}/avancements/${id}`, { method: 'DELETE' });
   },
 };
+
+// Authentification
+export const authService = {
+  login: async (email, password) => {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiant: email, password }),
+    });
+    if (!response.ok) {
+      throw new Error('Erreur de connexion');
+    }
+    return response.json();
+  },
+};
