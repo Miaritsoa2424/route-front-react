@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/Login.css';
 
 export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -42,6 +44,8 @@ export default function Login() {
       setTimeout(() => {
         console.log('Connexion réussie');
         setLoading(false);
+        // Rediriger vers le manager
+        navigate('/manager');
       }, 1000);
     } catch (err) {
       setError('Erreur de connexion. Veuillez réessayer.');

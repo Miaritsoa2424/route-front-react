@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import VisitorMap from './components/VisitorMap';
 import Login from './components/Login';
+import Manager from './components/Manager';
 import './App.css';
 
 function App() {
@@ -13,9 +14,8 @@ function App() {
         {/* Page de connexion */}
         <Route path="/login" element={<Login />} />
         
-        {/* Futures routes */}
-        {/* <Route path="/dashboard" element={<Dashboard />} /> */}
-        {/* <Route path="/manager" element={<ManagerDashboard />} /> */}
+        {/* Page Manager */}
+        <Route path="/manager" element={<Manager />} />
       </Routes>
     </Router>
   );
