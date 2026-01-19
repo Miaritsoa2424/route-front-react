@@ -1,50 +1,77 @@
-import { useState, useEffect } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState } from 'react'
 import './App.css'
+import UserList from './components/UserList'
+import SignalementList from './components/SignalementList'
+import Login from './components/Login'
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [apiMsg, setApiMsg] = useState('Chargement...')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [activeTab, setActiveTab] = useState('users')
 
-  useEffect(() => {
-    const fetchApi = async () => {
-      try {
-        const res = await fetch('http://localhost:8080/test')
-        if (!res.ok) throw new Error(await res.text())
-        const text = await res.text()
-        setApiMsg(text)
-      } catch (e) {
-        setApiMsg('Erreur: ' + (e.message ?? e))
-      }
-    }
-    fetchApi()
-  }, [])
+  // Afficher la page de login si pas connecté
+  if (!isLoggedIn) {
+    return <Login />
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+      <nav style={{
+        backgroundColor: '#333',
+        padding: '20px',
+        color: 'white',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1 style={{ margin: '0 0 20px 0' }}>Route Application</h1>
+          <button
+            onClick={() => setIsLoggedIn(false)}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#f44336',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '4px'
+            }}
+          >
+            Déconnexion
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => setActiveTab('users')}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: activeTab === 'users' ? '#4CAF50' : '#555',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '4px'
+            }}
+          >
+            Utilisateurs
+          </button>
+          <button
+            onClick={() => setActiveTab('signalements')}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: activeTab === 'signalements' ? '#4CAF50' : '#555',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '4px'
+            }}
+          >
+            Signalements
+          </button>
+        </div>
+      </nav>
+
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {activeTab === 'users' && <UserList />}
+        {activeTab === 'signalements' && <SignalementList />}
       </div>
-      <p style={{ marginTop: '1rem' }}>Backend API: {apiMsg}</p>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
 
