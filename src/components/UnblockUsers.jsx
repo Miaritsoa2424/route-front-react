@@ -28,36 +28,8 @@ export default function UnblockUsers() {
       console.error('Erreur lors du chargement des utilisateurs bloqués:', error);
       setErrorMessage('Erreur lors du chargement des utilisateurs bloqués');
       // Charger les données de démo en cas d'erreur
-      const demoData = [
-        {
-          id: 1,
-          email: 'john.doe@example.com',
-          nom: 'John Doe',
-          failedAttempts: 3,
-          blockedAt: '2024-01-18T14:30:00',
-          lastAttempt: '2024-01-18T14:45:00',
-          raison: 'Mot de passe incorrect saisi 3 fois'
-        },
-        {
-          id: 2,
-          email: 'marie.sophie@example.com',
-          nom: 'Marie Sophie',
-          failedAttempts: 5,
-          blockedAt: '2024-01-17T09:15:00',
-          lastAttempt: '2024-01-17T10:20:00',
-          raison: 'Mot de passe incorrect saisi 5 fois'
-        },
-        {
-          id: 3,
-          email: 'alex.martin@example.com',
-          nom: 'Alex Martin',
-          failedAttempts: 3,
-          blockedAt: '2024-01-16T16:45:00',
-          lastAttempt: '2024-01-16T17:00:00',
-          raison: 'Mot de passe incorrect saisi 3 fois'
-        }
-      ];
-      setBlockedUsers(demoData);
+ 
+      // setBlockedUsers(demoData);
     } finally {
       setLoading(false);
     }
@@ -179,10 +151,11 @@ export default function UnblockUsers() {
                   <div className="user-card-header">
                     <div className="user-info">
                       <div className="user-avatar">
-                        {user.nom.split(' ').map(n => n[0]).join('')}
+                        {/* {user.nom} */}
+                        {user.identifiant.split(' ').map(n => n[0]).join('')}
                       </div>
                       <div className="user-details">
-                        <h3>{user.nom}</h3>
+                        <h3>{user.identifiant}</h3>
                         <p className="user-email">{user.email}</p>
                       </div>
                     </div>
@@ -199,16 +172,8 @@ export default function UnblockUsers() {
                         <span className="info-value">{user.failedAttempts}</span>
                       </div>
                       <div className="info-item">
-                        <span className="info-label">Bloqué le:</span>
-                        <span className="info-value">{formatDate(user.blockedAt)}</span>
-                      </div>
-                      <div className="info-item">
-                        <span className="info-label">Dernière tentative:</span>
-                        <span className="info-value">{formatDate(user.lastAttempt)}</span>
-                      </div>
-                      <div className="info-item">
-                        <span className="info-label">Raison:</span>
-                        <span className="info-value">{user.raison}</span>
+                        <span className="info-label">Dernière connexion:</span>
+                        <span className="info-value">{formatDate(user.dateDerniereConnexion)}</span>
                       </div>
                     </div>
                   </div>
@@ -217,14 +182,14 @@ export default function UnblockUsers() {
                     <label className="checkbox-wrapper">
                       <input
                         type="checkbox"
-                        checked={unblockedUsers.has(user.id)}
+                        checked={unblockedUsers.has(user.idUser)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setUnblockedUsers(prev => new Set([...prev, user.id]));
+                            setUnblockedUsers(prev => new Set([...prev, user.idUser]));
                           } else {
                             setUnblockedUsers(prev => {
                               const newSet = new Set(prev);
-                              newSet.delete(user.id);
+                              newSet.delete(user.idUser);
                               return newSet;
                             });
                           }
@@ -234,7 +199,7 @@ export default function UnblockUsers() {
                     </label>
                     <button
                       className="unblock-button"
-                      onClick={() => handleUnblockUser(user.id)}
+                      onClick={() => handleUnblockUser(user.idUser)}
                     >
                       Débloquer cet utilisateur
                     </button>
