@@ -199,6 +199,12 @@ export default function Manager() {
         >
           {syncing ? 'Synchronisation en cours...' : 'Synchroniser avec Firebase'}
         </button>
+        <button 
+          className="unblock-users-button"
+          onClick={() => navigate('/manager/unblock-users')}
+        >
+          Débloquer des utilisateurs
+        </button>
       </div>
 
       {/* Message de succès */}

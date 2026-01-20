@@ -34,6 +34,29 @@ export const userService = {
   deleteUser: async (id) => {
     await fetch(`${API_BASE_URL}/users/${id}`, { method: 'DELETE' });
   },
+
+  // Utilisateurs bloqués
+  getBlockedUsers: async () => {
+    const response = await fetch(`${API_BASE_URL}/users/blocked`);
+    return response.json();
+  },
+
+  unblockUser: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/users/${id}/unblock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return response.json();
+  },
+
+  unblockMultipleUsers: async (userIds) => {
+    const response = await fetch(`${API_BASE_URL}/users/unblock-multiple`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userIds }),
+    });
+    return response.json();
+  },
 };
 
 // Signalements

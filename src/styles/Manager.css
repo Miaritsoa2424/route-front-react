@@ -100,6 +100,31 @@
   cursor: not-allowed;
 }
 
+.unblock-users-button {
+  padding: 12px 24px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.unblock-users-button:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.unblock-users-button:active {
+  transform: translateY(0);
+}
+
 /* Message de succès */
 .success-message {
   max-width: 1200px;
