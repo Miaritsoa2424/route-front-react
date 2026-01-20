@@ -193,7 +193,6 @@ export default function VisitorMap() {
               </div>
             )}
           </div>
-        </div>
 
         {/* Carte */}
         <div className="map-section">
@@ -297,5 +296,6 @@ export default function VisitorMap() {
             )}
         </div>
       </div>
+    </div>
   );
 }
