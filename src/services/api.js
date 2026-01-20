@@ -130,6 +130,14 @@ export const signalementStatutService = {
   },
 };
 
+// Stats
+export const statsService = {
+  getStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/stats`);
+    return response.json();
+  },
+};
+
 // Entreprises
 export const entrepriseService = {
   getAllEntreprises: async () => {
