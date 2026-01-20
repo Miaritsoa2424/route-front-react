@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signalementService, signalementStatutService } from '../services/api';
+import { signalementService, signalementStatutService, API_BASE_URL } from '../services/api';
 import '../styles/Manager.css';
 
 export default function Manager() {
@@ -23,24 +23,33 @@ export default function Manager() {
   const loadSignalements = async () => {
     setLoading(true);
     try {
-      const response = await signalementService.getAllSignalements();
+      // Récupérer les derniers statuts avec les signalements associés
+      const statutsResponse = await fetch(`${API_BASE_URL}/signalement-statuts/latest`);
+      const statuts = await statutsResponse.json();
       
-      setOriginalSignalements(response);
+      // Mapper les IDs de statut aux labels internes
+      const statusIdMap = {
+        1: 'en_attente',
+        2: 'en_cours',
+        3: 'resolu',
+        4: 'rejete'
+      };
       
-      // Mapper les données de l'API au format attendu
-      const mappedData = response.map(signalement => ({
-        id: signalement.idSignalement,
+      // Créer la liste des signalements mappés depuis les statuts
+      const mappedData = statuts.map(statut => ({
+        id: statut.signalement.idSignalement,
         type: 'Signalement routier', // Valeur par défaut
         date: new Date().toISOString().split('T')[0], // Date actuelle par défaut
-        status: 'nouveau', // Statut par défaut
-        surface: signalement.surface,
-        budget: signalement.budget,
-        entreprise: signalement.entreprise.nom,
-        localisation: `${signalement.latitude}, ${signalement.longitude}`,
-        description: `Signalement par ${signalement.user.identifiant}`
+        status: statusIdMap[statut.statutSignalement.idStatut] || 'en_attente',
+        surface: statut.signalement.surface,
+        budget: statut.signalement.budget,
+        entreprise: statut.signalement.entreprise.nom,
+        localisation: `${statut.signalement.latitude}, ${statut.signalement.longitude}`,
+        description: `Signalement par ${statut.signalement.user.identifiant}`
       }));
       
       setSignalements(mappedData);
+      setOriginalSignalements(statuts.map(statut => statut.signalement));
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
       setSuccessMessage('Erreur lors du chargement des signalements');
@@ -81,10 +90,10 @@ export default function Manager() {
     try {
       // Mapper le statut à l'id
       const statusMap = {
-        'nouveau': 1,
+        'en_attente': 1,
         'en_cours': 2,
-        'planifie': 3,
-        'complete': 4
+        'resolu': 3,
+        'rejete': 4
       };
       const idStatut = statusMap[editFormData.status] || 1;
       
@@ -120,21 +129,21 @@ export default function Manager() {
   // Obtenir la classe CSS pour le badge de statut
   const getStatusClass = (status) => {
     const statusMap = {
-      'nouveau': 'status-nouveau',
+      'en_attente': 'status-nouveau',
       'en_cours': 'status-en-cours',
-      'planifie': 'status-planifie',
-      'complete': 'status-complete'
+      'resolu': 'status-complete',
+      'rejete': 'status-planifie'
     };
-    return statusMap[status] || 'status-nouveau';
+    return statusMap[status] || 'status-en-attente';
   };
 
   // Obtenir le label du statut
   const getStatusLabel = (status) => {
     const labelMap = {
-      'nouveau': 'Nouveau',
+      'en_attente': 'En attente',
       'en_cours': 'En cours',
-      'planifie': 'Planifié',
-      'complete': 'Complété'
+      'resolu': 'Résolu',
+      'rejete': 'Rejeté'
     };
     return labelMap[status] || status;
   };
@@ -275,7 +284,7 @@ export default function Manager() {
                         <div className="form-group full-width">
                           <label>Statut</label>
                           <div className="status-selector">
-                            {['nouveau', 'en_cours', 'planifie', 'complete'].map(status => (
+                            {['en_attente', 'en_cours', 'resolu', 'rejete'].map(status => (
                               <button
                                 key={status}
                                 className={`status-option ${editFormData.status === status ? 'active' : ''}`}
