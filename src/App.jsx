@@ -3,6 +3,8 @@ import VisitorMap from './components/VisitorMap';
 import Login from './components/Login';
 import Manager from './components/Manager';
 import UnblockUsers from './components/UnblockUsers';
+import CreateUser from './components/CreateUser';
+import UsersList from './components/UsersList';
 import './App.css';
 
 function App() {
@@ -20,9 +22,15 @@ function App() {
         
         {/* Page déblocage d'utilisateurs */}
         <Route path="/manager/unblock-users" element={<UnblockUsers />} />
+        
+        {/* Page création d'utilisateur */}
+        <Route path="/manager/create-user" element={<CreateUser />} />
+        
+        {/* Page liste des utilisateurs */}
+        <Route path="/manager/users-list" element={<UsersList />} />
       </Routes>
     </Router>
   );
 }
 
-export default App; 
+export default App;

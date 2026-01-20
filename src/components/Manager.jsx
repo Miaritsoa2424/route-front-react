@@ -178,6 +178,18 @@ export default function Manager() {
           {syncing ? 'Rechargement en cours...' : 'Recharger les données'}
         </button>
         <button 
+          className="create-user-button"
+          onClick={() => navigate('/manager/create-user')}
+        >
+          Créer un compte
+        </button>
+        <button 
+          className="users-list-button"
+          onClick={() => navigate('/manager/users-list')}
+        >
+          Liste des utilisateurs
+        </button>
+        <button 
           className="unblock-users-button"
           onClick={() => navigate('/manager/unblock-users')}
         >
