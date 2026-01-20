@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/api';
 import '../styles/Login.css';
 
 export default function Login() {
@@ -24,31 +25,30 @@ export default function Login() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
-      return;
-    }
+    //if (password.length < 6) {
+    //  setError('Le mot de passe doit contenir au moins 6 caractères');
+    //  return;
+    //}
 
     setLoading(true);
     
-    // À remplacer par votre appel API
     try {
-      console.log('Tentative de connexion:', { email, password });
-      // const response = await fetch('/api/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password })
-      // });
-      // const data = await response.json();
+      const user = await authService.login(email, password);
       
-      setTimeout(() => {
-        console.log('Connexion réussie');
-        setLoading(false);
-        // Rediriger vers le manager
+      if (user && user.profil && user.profil.idProfil === 1) {
+        // Stocker le token si fourni
+        if (user.token) {
+          localStorage.setItem('token', user.token);
+        }
+        console.log('Connexion réussie en tant qu\'admin');
         navigate('/manager');
-      }, 1000);
+      } else {
+        console.log(user); 
+        setError('Accès refusé. Vous devez être administrateur.');
+      }
     } catch (err) {
-      setError('Erreur de connexion. Veuillez réessayer.');
+      setError('Erreur de connexion. Veuillez vérifier vos identifiants.');
+    } finally {
       setLoading(false);
     }
   };

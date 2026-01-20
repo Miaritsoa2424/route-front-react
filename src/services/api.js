@@ -1,5 +1,5 @@
 // Configuration de l'API
-const API_BASE_URL = 'http://localhost:8080/api';
+export const API_BASE_URL = 'http://localhost:8080/api';
 
 // Users
 export const userService = {
@@ -59,6 +59,7 @@ export const userService = {
   },
 };
 
+
 // Signalements
 export const signalementService = {
   getAllSignalements: async () => {
@@ -91,6 +92,41 @@ export const signalementService = {
 
   deleteSignalement: async (id) => {
     await fetch(`${API_BASE_URL}/signalements/${id}`, { method: 'DELETE' });
+  },
+};
+
+// SignalementStatut
+export const signalementStatutService = {
+  getAllSignalementStatuts: async () => {
+    const response = await fetch(`${API_BASE_URL}/signalement-statuts`);
+    return response.json();
+  },
+
+  getSignalementStatutById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/signalement-statuts/${id}`);
+    return response.json();
+  },
+
+  createSignalementStatut: async (signalementStatut) => {
+    const response = await fetch(`${API_BASE_URL}/signalement-statuts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(signalementStatut),
+    });
+    return response.json();
+  },
+
+  updateSignalementStatut: async (id, signalementStatut) => {
+    const response = await fetch(`${API_BASE_URL}/signalement-statuts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(signalementStatut),
+    });
+    return response.json();
+  },
+
+  deleteSignalementStatut: async (id) => {
+    await fetch(`${API_BASE_URL}/signalement-statuts/${id}`, { method: 'DELETE' });
   },
 };
 
@@ -196,5 +232,20 @@ export const avancementService = {
 
   deleteAvancement: async (id) => {
     await fetch(`${API_BASE_URL}/avancements/${id}`, { method: 'DELETE' });
+  },
+};
+
+// Authentification
+export const authService = {
+  login: async (email, password) => {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiant: email, password }),
+    });
+    if (!response.ok) {
+      throw new Error('Erreur de connexion');
+    }
+    return response.json();
   },
 };
