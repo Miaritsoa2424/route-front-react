@@ -70,10 +70,19 @@ export default function CreateUser() {
 
     setLoading(true);
     try {
+      const formatLocalDateTime = (date) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+      };
+
       const newUser = {
         identifiant: formData.identifiant.trim(),
         password: formData.password,
-        idProfil: formData.profil
+        dateCreation: formatLocalDateTime(new Date()),   // now
+        dateDerniereConnexion: null,                     // null as requested
+        profil: {
+          idProfil: Number(formData.profil)              // ensure numeric
+        }
       };
 
       await userService.createUser(newUser);
