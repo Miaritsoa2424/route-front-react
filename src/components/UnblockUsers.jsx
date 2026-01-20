@@ -174,7 +174,7 @@ export default function UnblockUsers() {
                   className="unblock-all-button"
                   onClick={handleUnblockSelected}
                 >
-                  Débloquer {unblockedUsers.size} utilisateur(s)
+                  Débloquer les utilisateurs sélectionnés
                 </button>
               )}
             </div>
