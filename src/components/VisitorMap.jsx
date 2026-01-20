@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { 
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { signalementService, statsService } from '../services/api';
 import '../styles/VisitorMap.css';
 
 // Fix pour les icônes Leaflet
@@ -25,72 +26,56 @@ L.Icon.Default.mergeOptions({
 
 export default function VisitorMap() {
   const navigate = useNavigate();
+  const [problems, setProblems] = useState([]);
+  const [stats, setStats] = useState({
+    nbSignalement: 0,
+    budgetTotal: 0,
+    surfaceTotal: 0,
+    avancementGlobal: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Données factices pour la démo (à remplacer par l'API)
-  const problems = [
-    {
-      id: 1,
-      lat: -18.9100,
-      lng: 47.5225,
-      type: 'Nid de poule',
-      date: '2024-01-15',
-      status: 'nouveau',
-      surface: 25,
-      budget: 5000000,
-      entreprise: 'RoadFix Mada'
-    },
-    {
-      id: 2,
-      lat: -18.9050,
-      lng: 47.5280,
-      type: 'Fissure importante',
-      date: '2024-01-10',
-      status: 'en cours',
-      surface: 15,
-      budget: 3000000,
-      entreprise: 'Batiment Plus'
-    },
-    {
-      id: 3,
-      lat: -18.9150,
-      lng: 47.5200,
-      type: 'Réparation complète',
-      date: '2024-01-05',
-      status: 'terminé',
-      surface: 40,
-      budget: 8000000,
-      entreprise: 'RoadFix Mada'
-    },
-    {
-      id: 4,
-      lat: -18.9120,
-      lng: 47.5300,
-      type: 'Affaissement de chaussée',
-      date: '2024-01-18',
-      status: 'nouveau',
-      surface: 60,
-      budget: 12000000,
-      entreprise: 'Construction Pro'
-    },
-    {
-      id: 5,
-      lat: -18.9080,
-      lng: 47.5250,
-      type: 'Égout bouché',
-      date: '2024-01-12',
-      status: 'en cours',
-      surface: 10,
-      budget: 2000000,
-      entreprise: 'Batiment Plus'
+  // Charger les données au montage
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Récupérer les stats
+      const statsData = await statsService.getStats();
+      setStats(statsData);
+
+      // Récupérer les signalements
+      const signalements = await signalementService.getAllSignalements();
+      
+      // Mapper les signalements au format des problèmes
+      const mappedProblems = signalements.map(signalement => ({
+        id: signalement.idSignalement,
+        lat: signalement.latitude,
+        lng: signalement.longitude,
+        type: 'Signalement routier',
+        date: new Date().toISOString().split('T')[0], // Date par défaut
+        status: 'nouveau', // Statut par défaut pour visiteurs
+        surface: signalement.surface,
+        budget: signalement.budget,
+        entreprise: signalement.entreprise.nom
+      }));
+      
+      setProblems(mappedProblems);
+    } catch (error) {
+      console.error('Erreur lors du chargement:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  // Calculs statistiques
-  const totalProblems = problems.length;
-  const totalSurface = problems.reduce((sum, p) => sum + p.surface, 0);
-  const totalBudget = problems.reduce((sum, p) => sum + p.budget, 0);
-  const completedProblems = problems.filter(p => p.status === 'terminé').length;
-  const avancement = ((completedProblems / totalProblems) * 100).toFixed(1);
+  // Calculs statistiques (utiliser les stats de l'API)
+  const totalProblems = stats.nbSignalement;
+  const totalSurface = stats.surfaceTotal;
+  const totalBudget = stats.budgetTotal;
+  const avancement = stats.avancementGlobal;
 
   // Icônes personnalisées pour les marqueurs
   const createCustomIcon = (status) => {
@@ -163,43 +148,50 @@ export default function VisitorMap() {
             <h2 className="stats-title">Statistiques en temps réel</h2>
             <span className="stats-subtitle">Vue d'ensemble des signalements</span>
           </div>
-          <div className="stats-grid">
-            <div className="stat-card stat-card-primary">
-              <div className="stat-icon-wrapper">
-                <MapPin size={24} />
-              </div>
-              <div className="stat-info">
-                <div className="stat-value">{totalProblems}</div>
-                <div className="stat-label">Points signalés</div>
-              </div>
+          {loading ? (
+            <div className="loading-state">
+              <p>Chargement des statistiques...</p>
             </div>
-            <div className="stat-card stat-card-secondary">
-              <div className="stat-icon-wrapper">
-                <Maximize size={24} />
+          ) : (
+              <div className="stats-grid">
+                <div className="stat-card stat-card-primary">
+                  <div className="stat-icon-wrapper">
+                    <MapPin size={24} />
+                  </div>
+                  <div className="stat-info">
+                    <div className="stat-value">{totalProblems}</div>
+                    <div className="stat-label">Points signalés</div>
+                  </div>
+                </div>
+                <div className="stat-card stat-card-secondary">
+                  <div className="stat-icon-wrapper">
+                    <Maximize size={24} />
+                  </div>
+                  <div className="stat-info">
+                    <div className="stat-value">{totalSurface} m²</div>
+                    <div className="stat-label">Surface totale</div>
+                  </div>
+                </div>
+                <div className="stat-card stat-card-accent">
+                  <div className="stat-icon-wrapper">
+                    <DollarSign size={24} />
+                  </div>
+                  <div className="stat-info">
+                    <div className="stat-value">{formatCurrency(totalBudget)}</div>
+                    <div className="stat-label">Budget total</div>
+                  </div>
+                </div>
+                <div className="stat-card stat-card-success">
+                  <div className="stat-icon-wrapper">
+                    <TrendingUp size={24} />
+                  </div>
+                  <div className="stat-info">
+                    <div className="stat-value">{avancement}%</div>
+                    <div className="stat-label">Avancement global</div>
+                  </div>
+                </div>
               </div>
-              <div className="stat-info">
-                <div className="stat-value">{totalSurface} m²</div>
-                <div className="stat-label">Surface totale</div>
-              </div>
-            </div>
-            <div className="stat-card stat-card-accent">
-              <div className="stat-icon-wrapper">
-                <DollarSign size={24} />
-              </div>
-              <div className="stat-info">
-                <div className="stat-value">{formatCurrency(totalBudget)}</div>
-                <div className="stat-label">Budget total</div>
-              </div>
-            </div>
-            <div className="stat-card stat-card-success">
-              <div className="stat-icon-wrapper">
-                <TrendingUp size={24} />
-              </div>
-              <div className="stat-info">
-                <div className="stat-value">{avancement}%</div>
-                <div className="stat-label">Avancement global</div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -226,79 +218,84 @@ export default function VisitorMap() {
             </div>
           </div>
           
-          <div className="map-container-wrapper">
-            <MapContainer 
-              center={[-18.9100, 47.5225]} 
-              zoom={13} 
-              className="leaflet-map"
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {problems.map((problem) => (
-                <Marker 
-                  key={problem.id}
-                  position={[problem.lat, problem.lng]}
-                  icon={createCustomIcon(problem.status)}
-                  eventHandlers={{
-                    mouseover: (e) => e.target.openPopup(),
-                    mouseout: (e) => e.target.closePopup(),
-                    click: (e) => e.target.openPopup()
-                  }}
-                >
-                  <Popup className="custom-popup">
-                    <div className="popup-content">
-                      <div className="popup-header">
-                        <h3 className="popup-title">{problem.type}</h3>
-                        {/* Normalize status into a safe CSS class name */}
-                        {(() => {
-                          const map = {
-                            'nouveau': 'nouveau',
-                            'en cours': 'en-cours',
-                            'terminé': 'termine'
-                          };
-                          const statusClass = map[problem.status] || problem.status.replace(/\s+/g, '-');
-                          return (
-                            <span className={`popup-status status-${statusClass}`}>
-                              {getStatusIcon(problem.status)}
-                              {getStatusLabel(problem.status)}
+          {loading ? (
+            <div className="loading-state">
+              <p>Chargement de la carte...</p>
+            </div>
+          ) : (
+            <div className="map-container-wrapper">
+              <MapContainer 
+                center={[-18.9100, 47.5225]} 
+                zoom={13} 
+                className="leaflet-map"
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {problems.map((problem) => (
+                  <Marker 
+                    key={problem.id}
+                    position={[problem.lat, problem.lng]}
+                    icon={createCustomIcon(problem.status)}
+                    eventHandlers={{
+                      mouseover: (e) => e.target.openPopup(),
+                      mouseout: (e) => e.target.closePopup(),
+                      click: (e) => e.target.openPopup()
+                    }}
+                  >
+                    <Popup className="custom-popup">
+                      <div className="popup-content">
+                        <div className="popup-header">
+                          <h3 className="popup-title">{problem.type}</h3>
+                          {/* Normalize status into a safe CSS class name */}
+                          {(() => {
+                            const map = {
+                              'nouveau': 'nouveau',
+                              'en cours': 'en-cours',
+                              'terminé': 'termine'
+                            };
+                            const statusClass = map[problem.status] || problem.status.replace(/\s+/g, '-');
+                            return (
+                              <span className={`popup-status status-${statusClass}`}>
+                                {getStatusIcon(problem.status)}
+                                {getStatusLabel(problem.status)}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <div className="popup-body">
+                          <div className="popup-row">
+                            <span className="popup-label">Date de signalement</span>
+                            <span className="popup-value">
+                              {new Date(problem.date).toLocaleDateString('fr-FR', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                              })}
                             </span>
-                          );
-                        })()}
-                      </div>
-                      <div className="popup-body">
-                        <div className="popup-row">
-                          <span className="popup-label">Date de signalement</span>
-                          <span className="popup-value">
-                            {new Date(problem.date).toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric'
-                            })}
-                          </span>
-                        </div>
-                        <div className="popup-row">
-                          <span className="popup-label">Surface affectée</span>
-                          <span className="popup-value">{problem.surface} m²</span>
-                        </div>
-                        <div className="popup-row">
-                          <span className="popup-label">Budget estimé</span>
-                          <span className="popup-value">{formatCurrency(problem.budget)}</span>
-                        </div>
-                        <div className="popup-row">
-                          <span className="popup-label">Entreprise</span>
-                          <span className="popup-value">{problem.entreprise}</span>
+                          </div>
+                          <div className="popup-row">
+                            <span className="popup-label">Surface affectée</span>
+                            <span className="popup-value">{problem.surface} m²</span>
+                          </div>
+                          <div className="popup-row">
+                            <span className="popup-label">Budget estimé</span>
+                            <span className="popup-value">{formatCurrency(problem.budget)}</span>
+                          </div>
+                          <div className="popup-row">
+                            <span className="popup-label">Entreprise</span>
+                            <span className="popup-value">{problem.entreprise}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+            )}
         </div>
       </div>
-    </div>
   );
 }
