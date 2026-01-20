@@ -21,11 +21,12 @@ export default function UnblockUsers() {
     setLoading(true);
     setErrorMessage('');
     try {
-      // À remplacer par votre appel API réel
-      // const response = await fetch('/api/users/blocked');
-      // const data = await response.json();
-      
-      // Données factices pour la démo
+      const data = await userService.getBlockedUsers();
+      setBlockedUsers(data || []);
+    } catch (error) {
+      console.error('Erreur lors du chargement des utilisateurs bloqués:', error);
+      setErrorMessage('Erreur lors du chargement des utilisateurs bloqués');
+      // Charger les données de démo en cas d'erreur
       const demoData = [
         {
           id: 1,
@@ -55,11 +56,7 @@ export default function UnblockUsers() {
           raison: 'Mot de passe incorrect saisi 3 fois'
         }
       ];
-      
       setBlockedUsers(demoData);
-    } catch (error) {
-      console.error('Erreur lors du chargement des utilisateurs bloqués:', error);
-      setErrorMessage('Erreur lors du chargement des utilisateurs bloqués');
     } finally {
       setLoading(false);
     }
@@ -68,13 +65,7 @@ export default function UnblockUsers() {
   // Débloquer un utilisateur
   const handleUnblockUser = async (userId) => {
     try {
-      // À remplacer par votre appel API réel
-      // const response = await fetch(`/api/users/${userId}/unblock`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' }
-      // });
-      
-      // Simulation du déblocage
+      await userService.unblockUser(userId);
       setBlockedUsers(blockedUsers.filter(u => u.id !== userId));
       setUnblockedUsers(prev => new Set([...prev, userId]));
       setSuccessMessage(`Utilisateur débloqué avec succès`);
@@ -82,6 +73,7 @@ export default function UnblockUsers() {
     } catch (error) {
       console.error('Erreur lors du déblocage:', error);
       setErrorMessage('Erreur lors du déblocage de l\'utilisateur');
+      setTimeout(() => setErrorMessage(''), 3000);
     }
   };
 
@@ -89,15 +81,12 @@ export default function UnblockUsers() {
   const handleUnblockSelected = async () => {
     if (unblockedUsers.size === 0) {
       setErrorMessage('Aucun utilisateur sélectionné');
+      setTimeout(() => setErrorMessage(''), 3000);
       return;
     }
 
     try {
-      // À remplacer par votre appel API réel pour débloquer plusieurs utilisateurs
-      // await Promise.all(Array.from(unblockedUsers).map(id =>
-      //   fetch(`/api/users/${id}/unblock`, { method: 'POST' })
-      // ));
-
+      await userService.unblockMultipleUsers(Array.from(unblockedUsers));
       setBlockedUsers(blockedUsers.filter(u => !unblockedUsers.has(u.id)));
       setUnblockedUsers(new Set());
       setSuccessMessage(`${unblockedUsers.size} utilisateur(s) débloqué(s) avec succès`);
@@ -105,6 +94,7 @@ export default function UnblockUsers() {
     } catch (error) {
       console.error('Erreur lors du déblocage multiple:', error);
       setErrorMessage('Erreur lors du déblocage des utilisateurs');
+      setTimeout(() => setErrorMessage(''), 3000);
     }
   };
 
@@ -140,13 +130,13 @@ export default function UnblockUsers() {
       {/* Messages */}
       {successMessage && (
         <div className="success-message">
-          ✓ {successMessage}
+          {successMessage}
         </div>
       )}
 
       {errorMessage && (
         <div className="error-message">
-          ✕ {errorMessage}
+          {errorMessage}
         </div>
       )}
 
