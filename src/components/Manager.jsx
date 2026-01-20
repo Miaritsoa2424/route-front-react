@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCw, UserPlus, Users, Unlock, CheckCircle, AlertCircle } from 'lucide-react';
 import { signalementService, signalementStatutService, API_BASE_URL } from '../services/api';
 import '../styles/Manager.css';
 
@@ -175,24 +176,28 @@ export default function Manager() {
           onClick={handleSync}
           disabled={syncing || loading}
         >
+          <RefreshCw size={18} />
           {syncing ? 'Rechargement en cours...' : 'Recharger les données'}
         </button>
         <button 
           className="create-user-button"
           onClick={() => navigate('/manager/create-user')}
         >
+          <UserPlus size={18} />
           Créer un compte
         </button>
         <button 
           className="users-list-button"
           onClick={() => navigate('/manager/users-list')}
         >
+          <Users size={18} />
           Liste des utilisateurs
         </button>
         <button 
           className="unblock-users-button"
           onClick={() => navigate('/manager/unblock-users')}
         >
+          <Unlock size={18} />
           Débloquer des utilisateurs
         </button>
       </div>
@@ -200,6 +205,7 @@ export default function Manager() {
       {/* Message de succès */}
       {successMessage && (
         <div className="success-message">
+          <CheckCircle size={18} />
           {successMessage}
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { userService } from '../services/api';
 import '../styles/UnblockUsers.css';
 
@@ -120,7 +121,7 @@ export default function UnblockUsers() {
               onClick={() => navigate('/manager')}
               title="Retour au Manager"
             >
-              ←
+              <ChevronLeft size={24} />
             </button>
             <h1>Débloquer des utilisateurs</h1>
           </div>
@@ -130,12 +131,14 @@ export default function UnblockUsers() {
       {/* Messages */}
       {successMessage && (
         <div className="success-message">
+          <CheckCircle size={18} />
           {successMessage}
         </div>
       )}
 
       {errorMessage && (
         <div className="error-message">
+          <AlertCircle size={18} />
           {errorMessage}
         </div>
       )}
@@ -184,6 +187,7 @@ export default function UnblockUsers() {
                       </div>
                     </div>
                     <div className="blocked-indicator">
+                      <Lock size={14} />
                       <span className="blocked-text">Bloqué</span>
                     </div>
                   </div>
