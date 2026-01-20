@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import { userService } from '../services/api';
 import '../styles/UsersList.css';
 
@@ -119,7 +120,7 @@ export default function UsersList() {
               onClick={() => navigate('/manager')}
               title="Retour au Manager"
             >
-              ←
+              <ChevronLeft size={24} />
             </button>
             <h1>Gestion des utilisateurs</h1>
           </div>

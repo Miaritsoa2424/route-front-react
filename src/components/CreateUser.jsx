@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { userService } from '../services/api';
 import '../styles/CreateUser.css';
 
@@ -107,7 +108,7 @@ export default function CreateUser() {
               onClick={() => navigate('/manager')}
               title="Retour au Manager"
             >
-              ←
+              <ChevronLeft size={24} />
             </button>
             <h1>Créer un compte utilisateur</h1>
           </div>
@@ -120,12 +121,14 @@ export default function CreateUser() {
           {/* Messages */}
           {successMessage && (
             <div className="success-message">
+              <CheckCircle size={18} />
               {successMessage}
             </div>
           )}
 
           {errorMessage && (
             <div className="error-message">
+              <AlertCircle size={18} />
               {errorMessage}
             </div>
           )}
