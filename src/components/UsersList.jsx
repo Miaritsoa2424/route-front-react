@@ -201,8 +201,8 @@ export default function UsersList() {
                     <tr key={user.idUser} className={user.blocked ? 'blocked-row' : ''}>
                       <td className="td-identifiant">{user.identifiant}</td>
                       <td>
-                        <span className={`profil-badge profil-${user.idProfil}`}>
-                          {profils[user.idProfil]}
+                        <span className={`profil-badge profil-${user.profil.idProfil}`}>
+                          {profils[user.profil.idProfil]}
                         </span>
                       </td>
                       <td>{formatDate(user.dateCreation)}</td>
