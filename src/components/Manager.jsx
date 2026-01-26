@@ -64,6 +64,9 @@ export default function Manager() {
   const handleSync = async () => {
     setSyncing(true);
     try {
+      await fetch(`${API_BASE_URL}/signalements/sync`, {
+        method: 'POST'
+      });
       await loadSignalements();
       setSuccessMessage('Données rechargées depuis l\'API');
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -100,6 +103,7 @@ export default function Manager() {
       
       const newSignalementStatut = {
         dateStatut: new Date().toISOString(),
+        // Mbola tsy vita ny authentification
         user: { idUser: 1 }, // Utilisateur connecté, à adapter
         statutSignalement: { idStatut: idStatut },
         signalement: { idSignalement: editingId }
