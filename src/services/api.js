@@ -251,8 +251,9 @@ export const authService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifiant: email, password }),
     });
+    const data = await response.json();
     if (!response.ok) {
-      throw new Error('Erreur de connexion');
+      throw new Error(data.message);
     }
     return response.json();
   },
