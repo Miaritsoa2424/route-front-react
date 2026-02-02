@@ -4,6 +4,7 @@ import { RefreshCw, UserPlus, Users, Unlock, CheckCircle, AlertCircle } from 'lu
 import { signalementService, signalementStatutService, API_BASE_URL } from '../services/api';
 import '../styles/Manager.css';
 
+
 export default function Manager() {
   const navigate = useNavigate();
   const [signalements, setSignalements] = useState([]);
@@ -14,6 +15,32 @@ export default function Manager() {
   const [editingId, setEditingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [editFormData, setEditFormData] = useState({});
+
+  const fetchWithAuth = async (url, options = {}) => {
+  const token = localStorage.getItem('token');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  // Si non autorisé, supprimer le token et rediriger vers login
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+    throw new Error('Session expirée. Veuillez vous reconnecter.');
+  }
+
+  return response;
+};
 
   // Charger les signalements au montage
   useEffect(() => {
@@ -64,7 +91,7 @@ export default function Manager() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await fetch(`${API_BASE_URL}/signalements/sync`, {
+      await fetchWithAuth(`${API_BASE_URL}/signalements/sync`, {
         method: 'POST'
       });
       await loadSignalements();
