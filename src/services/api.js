@@ -255,6 +255,6 @@ export const authService = {
     if (!response.ok) {
       throw new Error(data.message);
     }
-    return response.json();
+    return data;
   },
 };
