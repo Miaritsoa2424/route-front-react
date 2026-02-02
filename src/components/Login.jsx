@@ -35,15 +35,15 @@ export default function Login() {
     try {
       const user = await authService.login(email, password);
 
-      if (user && user.profil && user.profil.idProfil === 1) {
+      if (user.user && user.user.profil && user.user.profil.idProfil === 1) {
         // Stocker le token si fourni
-        if (user.token) {
-          localStorage.setItem('token', user.token);
+        if (user.user.token) {
+          localStorage.setItem('token', user.user.token);
         }
         console.log('Connexion réussie en tant qu\'admin');
         navigate('/manager');
       } else {
-        console.log(user);
+        console.log(user.user);
         setError('Accès refusé. Vous devez être administrateur.');
       }
     } catch (err) {
