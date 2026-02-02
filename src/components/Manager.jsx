@@ -17,38 +17,15 @@ export default function Manager() {
 
   // Charger les signalements au montage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
     loadSignalements();
-  }, [navigate]);
+  }, []);
 
   // Charger les signalements depuis l'API
-  const fetchWithAuth = async (url, options = {}) => {
-    const token = localStorage.getItem('token');
-    const headers = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    return fetch(url, {
-      ...options,
-      headers,
-    });
-  };
-
   const loadSignalements = async () => {
     setLoading(true);
     try {
-      
       // Récupérer les derniers statuts avec les signalements associés
-      const statutsResponse = await fetchWithAuth(`${API_BASE_URL}/signalement-statuts/latest`);
+      const statutsResponse = await fetch(`${API_BASE_URL}/signalement-statuts/latest`);
       const statuts = await statutsResponse.json();
       
       // Mapper les IDs de statut aux labels internes
@@ -87,7 +64,7 @@ export default function Manager() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      await fetchWithAuth(`${API_BASE_URL}/signalements/sync`, {
+      await fetch(`${API_BASE_URL}/signalements/sync`, {
         method: 'POST'
       });
       await loadSignalements();
@@ -177,7 +154,7 @@ export default function Manager() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    // À remplacer par votre logique de déconnexion
     navigate('/');
   };
 
