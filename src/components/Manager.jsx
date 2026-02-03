@@ -15,6 +15,9 @@ export default function Manager() {
   const [editingId, setEditingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [editFormData, setEditFormData] = useState({});
+  const [statistiques, setStatistiques] = useState([]);
+  const [statistiquesMoyennes, setStatistiquesMoyennes] = useState(null);
+  const [historiqueStatuts, setHistoriqueStatuts] = useState({});
 
   const fetchWithAuth = async (url, options = {}) => {
   const token = localStorage.getItem('token');
@@ -63,11 +66,41 @@ export default function Manager() {
         4: 'rejete'
       };
       
+      // Récupérer l'historique complet des statuts pour tous les signalements
+      const historyMap = {};
+      try {
+        const allStatuts = await signalementStatutService.getAllSignalementStatuts();
+        
+        console.log('Historique des statuts récupéré:', allStatuts);
+        
+        // Grouper par signalement
+        allStatuts.forEach(statut => {
+          const sigId = statut.signalement.idSignalement;
+          if (!historyMap[sigId]) {
+            historyMap[sigId] = [];
+          }
+          historyMap[sigId].push({
+            statut: statusIdMap[statut.statutSignalement.idStatut],
+            date: new Date(statut.dateStatut)
+          });
+        });
+        
+        // Trier par date croissante
+        Object.keys(historyMap).forEach(key => {
+          historyMap[key].sort((a, b) => a.date - b.date);
+        });
+        console.log('Historique mappé par signalement:', historyMap);
+      } catch (error) {
+        console.warn('Impossible de récupérer l\'historique complet des statuts:', error);
+        console.log('Utilisation des données actuelles pour les statistiques');
+      }
+      setHistoriqueStatuts(historyMap);
+      
       // Créer la liste des signalements mappés depuis les statuts
       const mappedData = statuts.map(statut => ({
         id: statut.signalement.idSignalement,
         type: 'Signalement routier', // Valeur par défaut
-        date: new Date().toISOString().split('T')[0], // Date actuelle par défaut
+        date: new Date(statut.dateStatut).toISOString().split('T')[0],
         status: statusIdMap[statut.statutSignalement.idStatut] || 'en_attente',
         surface: statut.signalement.surface,
         budget: statut.signalement.budget,
@@ -78,6 +111,16 @@ export default function Manager() {
       
       setSignalements(mappedData);
       setOriginalSignalements(statuts.map(statut => statut.signalement));
+      
+      // Calculer les statistiques
+      const stats = calculerStatistiques(mappedData, historyMap);
+      console.log('Statistiques calculées:', stats);
+      setStatistiques(stats);
+      
+      // Calculer les statistiques moyennes
+      const statsMoyennes = calculerStatistiquesMoyennes(stats);
+      console.log('Statistiques moyennes:', statsMoyennes);
+      setStatistiquesMoyennes(statsMoyennes);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
       setSuccessMessage('Erreur lors du chargement des signalements');
@@ -172,12 +215,197 @@ export default function Manager() {
   // Obtenir le label du statut
   const getStatusLabel = (status) => {
     const labelMap = {
-      'en_attente': 'En attente',
+      'en_attente': 'Nouveau',
       'en_cours': 'En cours',
-      'resolu': 'Résolu',
+      'resolu': 'Terminé',
       'rejete': 'Rejeté'
     };
     return labelMap[status] || status;
+  };
+
+  // Obtenir le pourcentage d'avancement basé sur le statut
+  const getProgressPercentage = (status) => {
+    const progressMap = {
+      'en_attente': 0,
+      'en_cours': 50,
+      'resolu': 100,
+      'rejete': 0
+    };
+    return progressMap[status] || 0;
+  };
+
+  // Obtenir la couleur de la barre de progression basée sur le pourcentage
+  const getProgressColor = (percentage) => {
+    if (percentage === 100) {
+      return '#22c55e'; // Vert
+    } else if (percentage === 50) {
+      return '#eab308'; // Jaune
+    } else {
+      return '#3b82f6'; // Bleu (par défaut)
+    }
+  };
+
+  // Formater une date au format français
+  const formatDate = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Obtenir les dates de chaque étape pour un signalement
+  const getEtapesDates = (signalementId) => {
+    const histoire = historiqueStatuts[signalementId] || [];
+    return {
+      nouveau: histoire.find(h => h.statut === 'en_attente')?.date,
+      encours: histoire.find(h => h.statut === 'en_cours')?.date,
+      resolu: histoire.find(h => h.statut === 'resolu')?.date,
+      rejete: histoire.find(h => h.statut === 'rejete')?.date
+    };
+  };
+
+  // Calculer les statistiques de jours entre les transitions
+  const calculerStatistiques = (signalements, historiqueMap) => {
+    console.log('Calcul statistiques avec:', { signalements: signalements.length, historiqueMap });
+    
+    return signalements.map(sig => {
+      const histoire = historiqueMap[sig.id] || [];
+      let joursNouveauEncours = '-';
+      let joursEncourTermine = '-';
+      let joursTotaux = '-';
+      let detailNouveauEncours = '';
+      let detailEncourTermine = '';
+      let detailTotaux = '';
+
+      console.log(`Statistiques pour ${sig.id}:`, histoire);
+
+      if (histoire.length >= 1) {
+        // Chercher les dates de transition
+        const dateNouveau = histoire.find(h => h.statut === 'en_attente')?.date;
+        const dateEncours = histoire.find(h => h.statut === 'en_cours')?.date;
+        const dateTermine = histoire.find(h => h.statut === 'resolu')?.date;
+
+        console.log(`  Dates pour ${sig.id}:`, { dateNouveau, dateEncours, dateTermine });
+
+        // Fonction utilitaire pour formater la durée
+        const formatDuration = (ms) => {
+          const totalSeconds = Math.floor(ms / 1000);
+          const days = Math.floor(totalSeconds / (24 * 3600));
+          const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          
+          if (days === 0 && hours === 0 && minutes === 0) {
+            return '< 1 min';
+          }
+          
+          const parts = [];
+          if (days > 0) parts.push(`${days}j`);
+          if (hours > 0) parts.push(`${hours}h`);
+          if (minutes > 0) parts.push(`${minutes}min`);
+          
+          return parts.join(' ');
+        };
+
+        // Calculer les différences
+        if (dateNouveau && dateEncours) {
+          const diffMs = dateEncours - dateNouveau;
+          joursNouveauEncours = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailNouveauEncours = formatDuration(diffMs);
+        }
+        if (dateEncours && dateTermine) {
+          const diffMs = dateTermine - dateEncours;
+          joursEncourTermine = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailEncourTermine = formatDuration(diffMs);
+        }
+        if (dateNouveau && dateTermine) {
+          const diffMs = dateTermine - dateNouveau;
+          joursTotaux = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailTotaux = formatDuration(diffMs);
+        } else if (dateNouveau) {
+          // Si pas encore terminé, calculer jusqu'à maintenant
+          const diffMs = new Date() - dateNouveau;
+          joursTotaux = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailTotaux = formatDuration(diffMs);
+        }
+      }
+
+      return {
+        id: sig.id,
+        type: sig.type,
+        joursNouveauEncours,
+        joursEncourTermine,
+        joursTotaux,
+        detailNouveauEncours,
+        detailEncourTermine,
+        detailTotaux
+      };
+    });
+  };
+
+  // Calculer les statistiques moyennes globales
+  const calculerStatistiquesMoyennes = (stats) => {
+    // Filtrer les valeurs valides (non "-")
+    const validNouveauEncours = stats.filter(s => s.joursNouveauEncours !== '-');
+    const validEncourTermine = stats.filter(s => s.joursEncourTermine !== '-');
+    const validTotaux = stats.filter(s => s.joursTotaux !== '-');
+
+    const formatDuration = (ms) => {
+      if (!ms || ms === 0) return '-';
+      const totalSeconds = Math.floor(ms / 1000);
+      const days = Math.floor(totalSeconds / (24 * 3600));
+      const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      
+      if (days === 0 && hours === 0 && minutes === 0) {
+        return '< 1 min';
+      }
+      
+      const parts = [];
+      if (days > 0) parts.push(`${days}j`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}min`);
+      
+      return parts.join(' ');
+    };
+
+    // Calculer les moyennes en millisecondes
+    let moyenneNouveauEncours = 0;
+    let moyenneEncourTermine = 0;
+    let moyenneTotaux = 0;
+
+    if (validNouveauEncours.length > 0) {
+      const somme = validNouveauEncours.reduce((acc, s) => acc + (s.joursNouveauEncours * 24 * 3600 * 1000), 0);
+      moyenneNouveauEncours = somme / validNouveauEncours.length;
+    }
+    
+    if (validEncourTermine.length > 0) {
+      const somme = validEncourTermine.reduce((acc, s) => acc + (s.joursEncourTermine * 24 * 3600 * 1000), 0);
+      moyenneEncourTermine = somme / validEncourTermine.length;
+    }
+    
+    if (validTotaux.length > 0) {
+      const somme = validTotaux.reduce((acc, s) => acc + (s.joursTotaux * 24 * 3600 * 1000), 0);
+      moyenneTotaux = somme / validTotaux.length;
+    }
+
+    return {
+      nouveauEncours: {
+        jours: Math.floor(moyenneNouveauEncours / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneNouveauEncours)
+      },
+      encourTermine: {
+        jours: Math.floor(moyenneEncourTermine / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneEncourTermine)
+      },
+      nouveauTermine: {
+        jours: Math.floor(moyenneTotaux / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneTotaux)
+      }
+    };
   };
 
   const handleLogout = () => {
@@ -369,6 +597,50 @@ export default function Manager() {
                     ) : (
                       // Affichage des détails
                       <div className="details-display">
+                        <div className="detail-full progress-section">
+                          <span className="label">Avancement</span>
+                          <div className="progress-container">
+                            <div className="progress-bar-wrapper">
+                              <div 
+                                className="progress-bar" 
+                                style={{ 
+                                  width: `${getProgressPercentage(signalement.status)}%`,
+                                  background: getProgressColor(getProgressPercentage(signalement.status))
+                                }}
+                              ></div>
+                            </div>
+                            <span className="progress-percentage">{getProgressPercentage(signalement.status)}%</span>
+                          </div>
+                          
+                          {/* Dates des étapes */}
+                          <div className="etapes-dates">
+                            {getEtapesDates(signalement.id).nouveau && (
+                              <div className="etape-date">
+                                <span className="etape-label">Nouveau</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).nouveau)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).encours && (
+                              <div className="etape-date">
+                                <span className="etape-label">En cours</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).encours)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).resolu && (
+                              <div className="etape-date">
+                                <span className="etape-label">Résolu</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).resolu)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).rejete && (
+                              <div className="etape-date">
+                                <span className="etape-label">Rejeté</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).rejete)}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="detail-row">
                           <div className="detail-item">
                             <span className="label">Surface</span>
@@ -408,6 +680,69 @@ export default function Manager() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Tableau de statistiques */}
+        {signalements.length > 0 && (
+          <div className="statistics-section">
+            <h2>Données réelles de traitement</h2>
+            {statistiques.length > 0 ? (
+              <div className="statistics-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Type de signalement</th>
+                      <th>Jours (Nouveau → En cours)</th>
+                      <th>Jours (En cours → Terminé)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statistiques.map(stat => (
+                      <tr key={stat.id}>
+                        <td>{stat.type}</td>
+                        <td className="center">
+                          <div className="duration-value">{stat.joursNouveauEncours}</div>
+                          <div className="duration-detail">{stat.detailNouveauEncours}</div>
+                        </td>
+                        <td className="center">
+                          <div className="duration-value">{stat.joursEncourTermine}</div>
+                          <div className="duration-detail">{stat.detailEncourTermine}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="statistics-placeholder">
+                <p>Données de statistiques indisponibles. Vérifiez la console pour plus de détails.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Statistiques moyennes */}
+        {statistiquesMoyennes && (
+          <div className="statistics-section moyennes-section">
+            <h2>Statistiques moyennes</h2>
+            <div className="moyennes-grid">
+              <div className="moyenne-card">
+                <div className="moyenne-label">Nouveau → En cours</div>
+                <div className="moyenne-value">{statistiquesMoyennes.nouveauEncours.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.nouveauEncours.detail}</div>
+              </div>
+              <div className="moyenne-card">
+                <div className="moyenne-label">En cours → Terminé</div>
+                <div className="moyenne-value">{statistiquesMoyennes.encourTermine.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.encourTermine.detail}</div>
+              </div>
+              <div className="moyenne-card highlight">
+                <div className="moyenne-label">Nouveau → Terminé</div>
+                <div className="moyenne-value">{statistiquesMoyennes.nouveauTermine.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.nouveauTermine.detail}</div>
+              </div>
+            </div>
           </div>
         )}
       </div>
