@@ -191,6 +191,17 @@ export default function Manager() {
     return progressMap[status] || 0;
   };
 
+  // Obtenir la couleur de la barre de progression basée sur le pourcentage
+  const getProgressColor = (percentage) => {
+    if (percentage === 100) {
+      return '#22c55e'; // Vert
+    } else if (percentage === 50) {
+      return '#eab308'; // Jaune
+    } else {
+      return '#3b82f6'; // Bleu (par défaut)
+    }
+  };
+
   const handleLogout = () => {
     // À remplacer par votre logique de déconnexion
     navigate('/');
@@ -386,7 +397,10 @@ export default function Manager() {
                             <div className="progress-bar-wrapper">
                               <div 
                                 className="progress-bar" 
-                                style={{ width: `${getProgressPercentage(signalement.status)}%` }}
+                                style={{ 
+                                  width: `${getProgressPercentage(signalement.status)}%`,
+                                  background: getProgressColor(getProgressPercentage(signalement.status))
+                                }}
                               ></div>
                             </div>
                             <span className="progress-percentage">{getProgressPercentage(signalement.status)}%</span>
