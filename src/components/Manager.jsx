@@ -172,12 +172,23 @@ export default function Manager() {
   // Obtenir le label du statut
   const getStatusLabel = (status) => {
     const labelMap = {
-      'en_attente': 'En attente',
+      'en_attente': 'Nouveau',
       'en_cours': 'En cours',
-      'resolu': 'Résolu',
+      'resolu': 'Terminé',
       'rejete': 'Rejeté'
     };
     return labelMap[status] || status;
+  };
+
+  // Obtenir le pourcentage d'avancement basé sur le statut
+  const getProgressPercentage = (status) => {
+    const progressMap = {
+      'en_attente': 0,
+      'en_cours': 50,
+      'resolu': 100,
+      'rejete': 0
+    };
+    return progressMap[status] || 0;
   };
 
   const handleLogout = () => {
@@ -369,6 +380,19 @@ export default function Manager() {
                     ) : (
                       // Affichage des détails
                       <div className="details-display">
+                        <div className="detail-full progress-section">
+                          <span className="label">Avancement</span>
+                          <div className="progress-container">
+                            <div className="progress-bar-wrapper">
+                              <div 
+                                className="progress-bar" 
+                                style={{ width: `${getProgressPercentage(signalement.status)}%` }}
+                              ></div>
+                            </div>
+                            <span className="progress-percentage">{getProgressPercentage(signalement.status)}%</span>
+                          </div>
+                        </div>
+
                         <div className="detail-row">
                           <div className="detail-item">
                             <span className="label">Surface</span>
