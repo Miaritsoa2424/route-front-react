@@ -15,6 +15,8 @@ export default function Manager() {
   const [editingId, setEditingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [editFormData, setEditFormData] = useState({});
+  const [statistiques, setStatistiques] = useState([]);
+  const [historiqueStatuts, setHistoriqueStatuts] = useState({});
 
   const fetchWithAuth = async (url, options = {}) => {
   const token = localStorage.getItem('token');
@@ -63,11 +65,45 @@ export default function Manager() {
         4: 'rejete'
       };
       
+      // Récupérer l'historique complet des statuts pour tous les signalements
+      const historyMap = {};
+      try {
+        const allStatutsResponse = await fetchWithAuth(`${API_BASE_URL}/signalement-statuts`);
+        if (!allStatutsResponse.ok) {
+          throw new Error(`HTTP ${allStatutsResponse.status}`);
+        }
+        const allStatuts = await allStatutsResponse.json();
+        
+        console.log('Historique des statuts récupéré:', allStatuts);
+        
+        // Grouper par signalement
+        allStatuts.forEach(statut => {
+          const sigId = statut.signalement.idSignalement;
+          if (!historyMap[sigId]) {
+            historyMap[sigId] = [];
+          }
+          historyMap[sigId].push({
+            statut: statusIdMap[statut.statutSignalement.idStatut],
+            date: new Date(statut.dateStatut)
+          });
+        });
+        
+        // Trier par date croissante
+        Object.keys(historyMap).forEach(key => {
+          historyMap[key].sort((a, b) => a.date - b.date);
+        });
+        console.log('Historique mappé par signalement:', historyMap);
+      } catch (error) {
+        console.warn('Impossible de récupérer l\'historique complet des statuts:', error);
+        console.log('Utilisation des données actuelles pour les statistiques');
+      }
+      setHistoriqueStatuts(historyMap);
+      
       // Créer la liste des signalements mappés depuis les statuts
       const mappedData = statuts.map(statut => ({
         id: statut.signalement.idSignalement,
         type: 'Signalement routier', // Valeur par défaut
-        date: new Date().toISOString().split('T')[0], // Date actuelle par défaut
+        date: new Date(statut.dateStatut).toISOString().split('T')[0],
         status: statusIdMap[statut.statutSignalement.idStatut] || 'en_attente',
         surface: statut.signalement.surface,
         budget: statut.signalement.budget,
@@ -78,6 +114,11 @@ export default function Manager() {
       
       setSignalements(mappedData);
       setOriginalSignalements(statuts.map(statut => statut.signalement));
+      
+      // Calculer les statistiques
+      const stats = calculerStatistiques(mappedData, historyMap);
+      console.log('Statistiques calculées:', stats);
+      setStatistiques(stats);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
       setSuccessMessage('Erreur lors du chargement des signalements');
@@ -200,6 +241,51 @@ export default function Manager() {
     } else {
       return '#3b82f6'; // Bleu (par défaut)
     }
+  };
+
+  // Calculer les statistiques de jours entre les transitions
+  const calculerStatistiques = (signalements, historiqueMap) => {
+    console.log('Calcul statistiques avec:', { signalements: signalements.length, historiqueMap });
+    
+    return signalements.map(sig => {
+      const histoire = historiqueMap[sig.id] || [];
+      let joursNouveauEncours = '-';
+      let joursEncourTermine = '-';
+      let joursTotaux = '-';
+
+      console.log(`Statistiques pour ${sig.id}:`, histoire);
+
+      if (histoire.length >= 1) {
+        // Chercher les dates de transition
+        const dateNouveau = histoire.find(h => h.statut === 'en_attente')?.date;
+        const dateEncours = histoire.find(h => h.statut === 'en_cours')?.date;
+        const dateTermine = histoire.find(h => h.statut === 'resolu')?.date;
+
+        console.log(`  Dates pour ${sig.id}:`, { dateNouveau, dateEncours, dateTermine });
+
+        // Calculer les différences en jours
+        if (dateNouveau && dateEncours) {
+          joursNouveauEncours = Math.floor((dateEncours - dateNouveau) / (1000 * 60 * 60 * 24));
+        }
+        if (dateEncours && dateTermine) {
+          joursEncourTermine = Math.floor((dateTermine - dateEncours) / (1000 * 60 * 60 * 24));
+        }
+        if (dateNouveau && dateTermine) {
+          joursTotaux = Math.floor((dateTermine - dateNouveau) / (1000 * 60 * 60 * 24));
+        } else if (dateNouveau) {
+          // Si pas encore terminé, calculer jusqu'à maintenant
+          joursTotaux = Math.floor((new Date() - dateNouveau) / (1000 * 60 * 60 * 24));
+        }
+      }
+
+      return {
+        id: sig.id,
+        type: sig.type,
+        joursNouveauEncours,
+        joursEncourTermine,
+        joursTotaux
+      };
+    });
   };
 
   const handleLogout = () => {
@@ -446,6 +532,41 @@ export default function Manager() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Tableau de statistiques */}
+        {signalements.length > 0 && (
+          <div className="statistics-section">
+            <h2>Statistiques de traitement</h2>
+            {statistiques.length > 0 ? (
+              <div className="statistics-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Type de signalement</th>
+                      <th>Jours (Nouveau → En cours)</th>
+                      <th>Jours (En cours → Terminé)</th>
+                      <th>Total (jours)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statistiques.map(stat => (
+                      <tr key={stat.id}>
+                        <td>{stat.type}</td>
+                        <td className="center">{stat.joursNouveauEncours}</td>
+                        <td className="center">{stat.joursEncourTermine}</td>
+                        <td className="center total">{stat.joursTotaux}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="statistics-placeholder">
+                <p>Données de statistiques indisponibles. Vérifiez la console pour plus de détails.</p>
+              </div>
+            )}
           </div>
         )}
       </div>
