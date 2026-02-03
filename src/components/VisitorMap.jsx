@@ -286,6 +286,20 @@ export default function VisitorMap() {
                             <span className="popup-label">Entreprise</span>
                             <span className="popup-value">{problem.entreprise}</span>
                           </div>
+                          <div className="popup-actions">
+                            <a 
+                              href={`#photos-${problem.id}`} 
+                              className="popup-link"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                // Logique pour afficher les photos
+                                console.log('Voir les photos du signalement', problem.id);
+                                // TODO: Ouvrir une modal ou rediriger vers la page des photos
+                              }}
+                            >
+                              📷 Voir les photos
+                            </a>
+                          </div>
                         </div>
                       </div>
                     </Popup>
