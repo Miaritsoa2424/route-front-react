@@ -16,6 +16,7 @@ export default function Manager() {
   const [successMessage, setSuccessMessage] = useState('');
   const [editFormData, setEditFormData] = useState({});
   const [statistiques, setStatistiques] = useState([]);
+  const [statistiquesMoyennes, setStatistiquesMoyennes] = useState(null);
   const [historiqueStatuts, setHistoriqueStatuts] = useState({});
 
   const fetchWithAuth = async (url, options = {}) => {
@@ -115,6 +116,11 @@ export default function Manager() {
       const stats = calculerStatistiques(mappedData, historyMap);
       console.log('Statistiques calculées:', stats);
       setStatistiques(stats);
+      
+      // Calculer les statistiques moyennes
+      const statsMoyennes = calculerStatistiquesMoyennes(stats);
+      console.log('Statistiques moyennes:', statsMoyennes);
+      setStatistiquesMoyennes(statsMoyennes);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
       setSuccessMessage('Erreur lors du chargement des signalements');
@@ -338,6 +344,68 @@ export default function Manager() {
         detailTotaux
       };
     });
+  };
+
+  // Calculer les statistiques moyennes globales
+  const calculerStatistiquesMoyennes = (stats) => {
+    // Filtrer les valeurs valides (non "-")
+    const validNouveauEncours = stats.filter(s => s.joursNouveauEncours !== '-');
+    const validEncourTermine = stats.filter(s => s.joursEncourTermine !== '-');
+    const validTotaux = stats.filter(s => s.joursTotaux !== '-');
+
+    const formatDuration = (ms) => {
+      if (!ms || ms === 0) return '-';
+      const totalSeconds = Math.floor(ms / 1000);
+      const days = Math.floor(totalSeconds / (24 * 3600));
+      const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      
+      if (days === 0 && hours === 0 && minutes === 0) {
+        return '< 1 min';
+      }
+      
+      const parts = [];
+      if (days > 0) parts.push(`${days}j`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}min`);
+      
+      return parts.join(' ');
+    };
+
+    // Calculer les moyennes en millisecondes
+    let moyenneNouveauEncours = 0;
+    let moyenneEncourTermine = 0;
+    let moyenneTotaux = 0;
+
+    if (validNouveauEncours.length > 0) {
+      const somme = validNouveauEncours.reduce((acc, s) => acc + (s.joursNouveauEncours * 24 * 3600 * 1000), 0);
+      moyenneNouveauEncours = somme / validNouveauEncours.length;
+    }
+    
+    if (validEncourTermine.length > 0) {
+      const somme = validEncourTermine.reduce((acc, s) => acc + (s.joursEncourTermine * 24 * 3600 * 1000), 0);
+      moyenneEncourTermine = somme / validEncourTermine.length;
+    }
+    
+    if (validTotaux.length > 0) {
+      const somme = validTotaux.reduce((acc, s) => acc + (s.joursTotaux * 24 * 3600 * 1000), 0);
+      moyenneTotaux = somme / validTotaux.length;
+    }
+
+    return {
+      nouveauEncours: {
+        jours: Math.floor(moyenneNouveauEncours / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneNouveauEncours)
+      },
+      encourTermine: {
+        jours: Math.floor(moyenneEncourTermine / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneEncourTermine)
+      },
+      nouveauTermine: {
+        jours: Math.floor(moyenneTotaux / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneTotaux)
+      }
+    };
   };
 
   const handleLogout = () => {
@@ -618,7 +686,7 @@ export default function Manager() {
         {/* Tableau de statistiques */}
         {signalements.length > 0 && (
           <div className="statistics-section">
-            <h2>Statistiques de traitement</h2>
+            <h2>Données réelles de traitement</h2>
             {statistiques.length > 0 ? (
               <div className="statistics-table">
                 <table>
@@ -627,7 +695,6 @@ export default function Manager() {
                       <th>Type de signalement</th>
                       <th>Jours (Nouveau → En cours)</th>
                       <th>Jours (En cours → Terminé)</th>
-                      <th>Total (jours)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -642,10 +709,6 @@ export default function Manager() {
                           <div className="duration-value">{stat.joursEncourTermine}</div>
                           <div className="duration-detail">{stat.detailEncourTermine}</div>
                         </td>
-                        <td className="center total">
-                          <div className="duration-value">{stat.joursTotaux}</div>
-                          <div className="duration-detail">{stat.detailTotaux}</div>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -656,6 +719,30 @@ export default function Manager() {
                 <p>Données de statistiques indisponibles. Vérifiez la console pour plus de détails.</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Statistiques moyennes */}
+        {statistiquesMoyennes && (
+          <div className="statistics-section moyennes-section">
+            <h2>Statistiques moyennes</h2>
+            <div className="moyennes-grid">
+              <div className="moyenne-card">
+                <div className="moyenne-label">Nouveau → En cours</div>
+                <div className="moyenne-value">{statistiquesMoyennes.nouveauEncours.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.nouveauEncours.detail}</div>
+              </div>
+              <div className="moyenne-card">
+                <div className="moyenne-label">En cours → Terminé</div>
+                <div className="moyenne-value">{statistiquesMoyennes.encourTermine.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.encourTermine.detail}</div>
+              </div>
+              <div className="moyenne-card highlight">
+                <div className="moyenne-label">Nouveau → Terminé</div>
+                <div className="moyenne-value">{statistiquesMoyennes.nouveauTermine.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.nouveauTermine.detail}</div>
+              </div>
+            </div>
           </div>
         )}
       </div>
