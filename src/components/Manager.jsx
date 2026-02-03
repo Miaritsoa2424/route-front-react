@@ -68,11 +68,7 @@ export default function Manager() {
       // Récupérer l'historique complet des statuts pour tous les signalements
       const historyMap = {};
       try {
-        const allStatutsResponse = await fetchWithAuth(`${API_BASE_URL}/signalement-statuts`);
-        if (!allStatutsResponse.ok) {
-          throw new Error(`HTTP ${allStatutsResponse.status}`);
-        }
-        const allStatuts = await allStatutsResponse.json();
+        const allStatuts = await signalementStatutService.getAllSignalementStatuts();
         
         console.log('Historique des statuts récupéré:', allStatuts);
         
@@ -241,6 +237,29 @@ export default function Manager() {
     } else {
       return '#3b82f6'; // Bleu (par défaut)
     }
+  };
+
+  // Formater une date au format français
+  const formatDate = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Obtenir les dates de chaque étape pour un signalement
+  const getEtapesDates = (signalementId) => {
+    const histoire = historiqueStatuts[signalementId] || [];
+    return {
+      nouveau: histoire.find(h => h.statut === 'en_attente')?.date,
+      encours: histoire.find(h => h.statut === 'en_cours')?.date,
+      resolu: histoire.find(h => h.statut === 'resolu')?.date,
+      rejete: histoire.find(h => h.statut === 'rejete')?.date
+    };
   };
 
   // Calculer les statistiques de jours entre les transitions
@@ -490,6 +509,34 @@ export default function Manager() {
                               ></div>
                             </div>
                             <span className="progress-percentage">{getProgressPercentage(signalement.status)}%</span>
+                          </div>
+                          
+                          {/* Dates des étapes */}
+                          <div className="etapes-dates">
+                            {getEtapesDates(signalement.id).nouveau && (
+                              <div className="etape-date">
+                                <span className="etape-label">Nouveau</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).nouveau)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).encours && (
+                              <div className="etape-date">
+                                <span className="etape-label">En cours</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).encours)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).resolu && (
+                              <div className="etape-date">
+                                <span className="etape-label">Résolu</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).resolu)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).rejete && (
+                              <div className="etape-date">
+                                <span className="etape-label">Rejeté</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).rejete)}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
