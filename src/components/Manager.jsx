@@ -271,6 +271,9 @@ export default function Manager() {
       let joursNouveauEncours = '-';
       let joursEncourTermine = '-';
       let joursTotaux = '-';
+      let detailNouveauEncours = '';
+      let detailEncourTermine = '';
+      let detailTotaux = '';
 
       console.log(`Statistiques pour ${sig.id}:`, histoire);
 
@@ -282,18 +285,45 @@ export default function Manager() {
 
         console.log(`  Dates pour ${sig.id}:`, { dateNouveau, dateEncours, dateTermine });
 
-        // Calculer les différences en jours
+        // Fonction utilitaire pour formater la durée
+        const formatDuration = (ms) => {
+          const totalSeconds = Math.floor(ms / 1000);
+          const days = Math.floor(totalSeconds / (24 * 3600));
+          const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          
+          if (days === 0 && hours === 0 && minutes === 0) {
+            return '< 1 min';
+          }
+          
+          const parts = [];
+          if (days > 0) parts.push(`${days}j`);
+          if (hours > 0) parts.push(`${hours}h`);
+          if (minutes > 0) parts.push(`${minutes}min`);
+          
+          return parts.join(' ');
+        };
+
+        // Calculer les différences
         if (dateNouveau && dateEncours) {
-          joursNouveauEncours = Math.floor((dateEncours - dateNouveau) / (1000 * 60 * 60 * 24));
+          const diffMs = dateEncours - dateNouveau;
+          joursNouveauEncours = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailNouveauEncours = formatDuration(diffMs);
         }
         if (dateEncours && dateTermine) {
-          joursEncourTermine = Math.floor((dateTermine - dateEncours) / (1000 * 60 * 60 * 24));
+          const diffMs = dateTermine - dateEncours;
+          joursEncourTermine = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailEncourTermine = formatDuration(diffMs);
         }
         if (dateNouveau && dateTermine) {
-          joursTotaux = Math.floor((dateTermine - dateNouveau) / (1000 * 60 * 60 * 24));
+          const diffMs = dateTermine - dateNouveau;
+          joursTotaux = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailTotaux = formatDuration(diffMs);
         } else if (dateNouveau) {
           // Si pas encore terminé, calculer jusqu'à maintenant
-          joursTotaux = Math.floor((new Date() - dateNouveau) / (1000 * 60 * 60 * 24));
+          const diffMs = new Date() - dateNouveau;
+          joursTotaux = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailTotaux = formatDuration(diffMs);
         }
       }
 
@@ -302,7 +332,10 @@ export default function Manager() {
         type: sig.type,
         joursNouveauEncours,
         joursEncourTermine,
-        joursTotaux
+        joursTotaux,
+        detailNouveauEncours,
+        detailEncourTermine,
+        detailTotaux
       };
     });
   };
@@ -601,9 +634,18 @@ export default function Manager() {
                     {statistiques.map(stat => (
                       <tr key={stat.id}>
                         <td>{stat.type}</td>
-                        <td className="center">{stat.joursNouveauEncours}</td>
-                        <td className="center">{stat.joursEncourTermine}</td>
-                        <td className="center total">{stat.joursTotaux}</td>
+                        <td className="center">
+                          <div className="duration-value">{stat.joursNouveauEncours}</div>
+                          <div className="duration-detail">{stat.detailNouveauEncours}</div>
+                        </td>
+                        <td className="center">
+                          <div className="duration-value">{stat.joursEncourTermine}</div>
+                          <div className="duration-detail">{stat.detailEncourTermine}</div>
+                        </td>
+                        <td className="center total">
+                          <div className="duration-value">{stat.joursTotaux}</div>
+                          <div className="duration-detail">{stat.detailTotaux}</div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
