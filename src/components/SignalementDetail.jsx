@@ -12,8 +12,7 @@ import {
   Clock,
   Image as ImageIcon,
   X,
-  ZoomIn,
-  Download
+  ZoomIn
 } from 'lucide-react';
 import '../styles/SignalementDetail.css';
 
@@ -75,6 +74,20 @@ export default function SignalementDetail() {
             thumbnail: 'https://images.unsplash.com/photo-1581094271901-8022df4466f9?w=400',
             description: 'Vue latérale des dégradations',
             date: '2025-01-15'
+          },
+        {
+            id: 1,
+            url: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=1200',
+            thumbnail: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=400',
+            description: 'Vue d\'ensemble de la zone affectée',
+            date: '2025-01-15'
+          },
+          {
+            id: 2,
+            url: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=1200',
+            thumbnail: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=400',
+            description: 'Détail des fissures sur la chaussée',
+            date: '2025-01-15'
           }
         ]
       };
@@ -130,10 +143,6 @@ export default function SignalementDetail() {
   const closeLightbox = () => {
     setLightboxOpen(false);
     setSelectedPhoto(null);
-  };
-
-  const handleDownload = (photoUrl) => {
-    window.open(photoUrl, '_blank');
   };
 
   if (loading) {
@@ -328,13 +337,6 @@ export default function SignalementDetail() {
             />
             <div className="lightbox-info">
               <p className="lightbox-description">{selectedPhoto.description}</p>
-              <button 
-                className="download-button"
-                onClick={() => handleDownload(selectedPhoto.url)}
-              >
-                <Download size={18} />
-                Télécharger
-              </button>
             </div>
           </div>
         </div>
