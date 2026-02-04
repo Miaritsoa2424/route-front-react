@@ -238,9 +238,12 @@ export default function VisitorMap() {
                     position={[problem.lat, problem.lng]}
                     icon={createCustomIcon(problem.status)}
                     eventHandlers={{
-                      mouseover: (e) => e.target.openPopup(),
-                      mouseout: (e) => e.target.closePopup(),
-                      click: (e) => e.target.openPopup()
+                      mouseover: (e) => {
+                        e.target.openPopup();
+                      },
+                      click: (e) => {
+                        e.target.openPopup();
+                      }
                     }}
                   >
                     <Popup className="custom-popup">
@@ -292,9 +295,7 @@ export default function VisitorMap() {
                               className="popup-link"
                               onClick={(e) => {
                                 e.preventDefault();
-                                // Logique pour afficher les photos
-                                console.log('Voir les photos du signalement', problem.id);
-                                // TODO: Ouvrir une modal ou rediriger vers la page des photos
+                                navigate(`/signalement/${problem.id}`);
                               }}
                             >
                               📷 Voir les photos
