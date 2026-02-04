@@ -10,7 +10,10 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Image as ImageIcon
+  Image as ImageIcon,
+  X,
+  ZoomIn,
+  Download
 } from 'lucide-react';
 import '../styles/SignalementDetail.css';
 
@@ -20,6 +23,7 @@ export default function SignalementDetail() {
   const [signalement, setSignalement] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     loadSignalementDetails();
@@ -44,17 +48,38 @@ export default function SignalementDetail() {
         entreprise: 'Entreprise BTP Madagascar',
         description: 'Route fortement dégradée nécessitant une réfection urgente. Plusieurs nids-de-poule importants compromettent la circulation des véhicules.',
         photos: [
-          'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800',
-          'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=800',
-          'https://images.unsplash.com/photo-1584267380142-a3de57be0d48?w=800',
-          'https://images.unsplash.com/photo-1581094271901-8022df4466f9?w=800'
+          {
+            id: 1,
+            url: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=1200',
+            thumbnail: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=400',
+            description: 'Vue d\'ensemble de la zone affectée',
+            date: '2025-01-15'
+          },
+          {
+            id: 2,
+            url: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=1200',
+            thumbnail: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=400',
+            description: 'Détail des fissures sur la chaussée',
+            date: '2025-01-15'
+          },
+          {
+            id: 3,
+            url: 'https://images.unsplash.com/photo-1584267380142-a3de57be0d48?w=1200',
+            thumbnail: 'https://images.unsplash.com/photo-1584267380142-a3de57be0d48?w=400',
+            description: 'Nid-de-poule principal',
+            date: '2025-01-15'
+          },
+          {
+            id: 4,
+            url: 'https://images.unsplash.com/photo-1581094271901-8022df4466f9?w=1200',
+            thumbnail: 'https://images.unsplash.com/photo-1581094271901-8022df4466f9?w=400',
+            description: 'Vue latérale des dégradations',
+            date: '2025-01-15'
+          }
         ]
       };
       
       setSignalement(mockData);
-      if (mockData.photos.length > 0) {
-        setSelectedPhoto(mockData.photos[0]);
-      }
     } catch (error) {
       console.error('Erreur lors du chargement des détails:', error);
     } finally {
@@ -95,6 +120,20 @@ export default function SignalementDetail() {
       currency: 'MGA',
       minimumFractionDigits: 0
     }).format(amount);
+  };
+
+  const openLightbox = (photo) => {
+    setSelectedPhoto(photo);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setSelectedPhoto(null);
+  };
+
+  const handleDownload = (photoUrl) => {
+    window.open(photoUrl, '_blank');
   };
 
   if (loading) {
@@ -155,27 +194,30 @@ export default function SignalementDetail() {
             </div>
             
             {signalement.photos && signalement.photos.length > 0 ? (
-              <>
-                <div className="main-photo-container">
-                  <img 
-                    src={selectedPhoto} 
-                    alt="Photo principale du signalement"
-                    className="main-photo"
-                  />
-                </div>
-                
-                <div className="photo-thumbnails">
-                  {signalement.photos.map((photo, index) => (
-                    <button
-                      key={index}
-                      className={`thumbnail ${selectedPhoto === photo ? 'active' : ''}`}
-                      onClick={() => setSelectedPhoto(photo)}
-                    >
-                      <img src={photo} alt={`Photo ${index + 1}`} />
-                    </button>
-                  ))}
-                </div>
-              </>
+              <div className="photos-grid">
+                {signalement.photos.map((photo) => (
+                  <div 
+                    key={photo.id} 
+                    className="photo-card"
+                    onClick={() => openLightbox(photo)}
+                  >
+                    <div className="photo-wrapper">
+                      <img 
+                        src={photo.thumbnail} 
+                        alt={photo.description}
+                        className="photo-img"
+                      />
+                      <div className="photo-overlay">
+                        <ZoomIn size={32} />
+                        <span>Agrandir</span>
+                      </div>
+                    </div>
+                    <div className="photo-info">
+                      <p className="photo-description">{photo.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="no-photos">
                 <ImageIcon size={48} />
@@ -270,6 +312,33 @@ export default function SignalementDetail() {
           </div>
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightboxOpen && selectedPhoto && (
+        <div className="lightbox" onClick={closeLightbox}>
+          <button className="lightbox-close" onClick={closeLightbox}>
+            <X size={24} />
+          </button>
+          
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={selectedPhoto.url} 
+              alt={selectedPhoto.description}
+              className="lightbox-img"
+            />
+            <div className="lightbox-info">
+              <p className="lightbox-description">{selectedPhoto.description}</p>
+              <button 
+                className="download-button"
+                onClick={() => handleDownload(selectedPhoto.url)}
+              >
+                <Download size={18} />
+                Télécharger
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
