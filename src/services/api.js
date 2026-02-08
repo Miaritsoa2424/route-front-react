@@ -116,6 +116,14 @@ export const signalementService = {
   },
 };
 
+// Images
+export const imageService = {
+  getImagesBySignalement: async (signalementId) => {
+    const response = await fetchWithAuth(`${API_BASE_URL}/signalements/${signalementId}/images`);
+    return response.json();
+  },
+};
+
 // SignalementStatut
 export const signalementStatutService = {
   getAllSignalementStatuts: async () => {
