@@ -15,6 +15,7 @@ import {
   ZoomIn
 } from 'lucide-react';
 import '../styles/SignalementDetail.css';
+import { signalementService, imageService } from '../services/api';
 
 export default function SignalementDetail() {
   const { id } = useParams();
@@ -23,6 +24,7 @@ export default function SignalementDetail() {
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [images, setImages] = useState([]);
 
   useEffect(() => {
     loadSignalementDetails();
@@ -31,68 +33,23 @@ export default function SignalementDetail() {
   const loadSignalementDetails = async () => {
     setLoading(true);
     try {
-      // TODO: Remplacer par un appel API réel
-      // const data = await signalementService.getSignalementById(id);
+      // Charger les détails du signalement
+      const data = await signalementService.getSignalementById(id);
       
-      // Données statiques pour l'instant
-      const mockData = {
-        id: id,
-        type: 'Signalement routier',
-        lat: -18.9100,
-        lng: 47.5225,
-        date: '2025-01-15',
-        status: 'en cours',
-        surface: 150,
-        budget: 5500000,
-        entreprise: 'Entreprise BTP Madagascar',
-        description: 'Route fortement dégradée nécessitant une réfection urgente. Plusieurs nids-de-poule importants compromettent la circulation des véhicules.',
-        photos: [
-          {
-            id: 1,
-            url: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=1200',
-            thumbnail: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=400',
-            description: 'Vue d\'ensemble de la zone affectée',
-            date: '2025-01-15'
-          },
-          {
-            id: 2,
-            url: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=1200',
-            thumbnail: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=400',
-            description: 'Détail des fissures sur la chaussée',
-            date: '2025-01-15'
-          },
-          {
-            id: 3,
-            url: 'https://images.unsplash.com/photo-1584267380142-a3de57be0d48?w=1200',
-            thumbnail: 'https://images.unsplash.com/photo-1584267380142-a3de57be0d48?w=400',
-            description: 'Nid-de-poule principal',
-            date: '2025-01-15'
-          },
-          {
-            id: 4,
-            url: 'https://images.unsplash.com/photo-1581094271901-8022df4466f9?w=1200',
-            thumbnail: 'https://images.unsplash.com/photo-1581094271901-8022df4466f9?w=400',
-            description: 'Vue latérale des dégradations',
-            date: '2025-01-15'
-          },
-        {
-            id: 1,
-            url: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=1200',
-            thumbnail: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=400',
-            description: 'Vue d\'ensemble de la zone affectée',
-            date: '2025-01-15'
-          },
-          {
-            id: 2,
-            url: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=1200',
-            thumbnail: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=400',
-            description: 'Détail des fissures sur la chaussée',
-            date: '2025-01-15'
-          }
-        ]
-      };
+      // Charger les images du signalement
+      const imagesData = await imageService.getImagesBySignalement(id);
       
-      setSignalement(mockData);
+      // Transformer les images en format compatible avec le composant
+      const formattedImages = imagesData.map(img => ({
+        id: img.id,
+        url: img.lien,
+        thumbnail: img.lien,
+        description: img.description || 'Aucune description',
+        date: img.date
+      }));
+      
+      setImages(formattedImages);
+      setSignalement(data);
     } catch (error) {
       console.error('Erreur lors du chargement des détails:', error);
     } finally {
@@ -202,9 +159,9 @@ export default function SignalementDetail() {
               <h2>Photos du signalement</h2>
             </div>
             
-            {signalement.photos && signalement.photos.length > 0 ? (
+            {images && images.length > 0 ? (
               <div className="photos-grid">
-                {signalement.photos.map((photo) => (
+                {images.map((photo) => (
                   <div 
                     key={photo.id} 
                     className="photo-card"
