@@ -64,7 +64,8 @@ export default function VisitorMap() {
       
       // Mapper les signalements au format des problèmes
       const mappedProblems = signalements.map(signalement => ({
-        id: signalement.id || signalement.idSignalement,
+        id: signalement.idSignalement || signalement.id,  // Utiliser idSignalement PostgreSQL pour la navigation
+        firestoreId: signalement.id,  // Garder l'ID Firestore si nécessaire
         lat: signalement.latitude || signalement.localisation?.latitude,
         lng: signalement.longitude || signalement.localisation?.longitude,
         type: 'Signalement routier',
@@ -334,6 +335,7 @@ export default function VisitorMap() {
                               className="popup-link"
                               onClick={(e) => {
                                 e.preventDefault();
+                                console.log('Navigation vers signalement ID:', problem.id);
                                 navigate(`/signalement/${problem.id}`);
                               }}
                             >
