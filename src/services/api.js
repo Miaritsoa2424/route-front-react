@@ -28,6 +28,21 @@ const fetchWithAuth = async (url, options = {}) => {
   return response;
 };
 
+// Helper function pour les requêtes sans authentification (endpoints publics)
+const fetchWithoutAuth = async (url, options = {}) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  return response;
+};
+
 // Users
 export const userService = {
   getAllUsers: async () => {
@@ -86,12 +101,12 @@ export const userService = {
 // Signalements
 export const signalementService = {
   getAllSignalements: async () => {
-    const response = await fetchWithAuth(`${API_BASE_URL}/signalements`);
+    const response = await fetchWithoutAuth(`${API_BASE_URL}/signalements`);
     return response.json();
   },
 
   getSignalementById: async (id) => {
-    const response = await fetchWithAuth(`${API_BASE_URL}/signalements/${id}`);
+    const response = await fetchWithoutAuth(`${API_BASE_URL}/signalements/${id}`);
     return response.json();
   },
 
@@ -119,7 +134,7 @@ export const signalementService = {
 // Images
 export const imageService = {
   getImagesBySignalement: async (signalementId) => {
-    const response = await fetchWithAuth(`${API_BASE_URL}/signalements/${signalementId}/images`);
+    const response = await fetchWithoutAuth(`${API_BASE_URL}/signalements/${signalementId}/images`);
     return response.json();
   },
 };
@@ -160,7 +175,7 @@ export const signalementStatutService = {
 // Stats
 export const statsService = {
   getStats: async () => {
-    const response = await fetchWithAuth(`${API_BASE_URL}/stats`);
+    const response = await fetchWithoutAuth(`${API_BASE_URL}/stats`);
     return response.json();
   },
 };
