@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { 
   LogIn, 
   MapPin, 
@@ -45,26 +45,40 @@ export default function VisitorMap() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Récupérer les stats
-      const statsData = await statsService.getStats();
-      setStats(statsData);
+      // Récupérer les stats (optionnel pour visiteurs)
+      try {
+        const statsData = await statsService.getStats();
+        setStats(statsData);
+      } catch (statsError) {
+        console.warn('Impossible de récupérer les stats:', statsError);
+        // Utiliser des valeurs par défaut
+        setStats({
+          nbSignalement: 0,
+          budgetTotal: 0,
+          surfaceTotal: 0,
+          avancementGlobal: 0
+        });
+      }
 
       // Récupérer les signalements
       const signalements = await signalementService.getAllSignalements();
+      console.log('Signalements récupérés:', signalements);
       
       // Mapper les signalements au format des problèmes
       const mappedProblems = signalements.map(signalement => ({
-        id: signalement.idSignalement,
-        lat: signalement.latitude,
-        lng: signalement.longitude,
+        id: signalement.idSignalement || signalement.id,  // Utiliser idSignalement PostgreSQL pour la navigation
+        firestoreId: signalement.id,  // Garder l'ID Firestore si nécessaire
+        lat: signalement.latitude || signalement.localisation?.latitude,
+        lng: signalement.longitude || signalement.localisation?.longitude,
         type: 'Signalement routier',
-        date: new Date().toISOString().split('T')[0], // Date par défaut
-        status: 'nouveau', // Statut par défaut pour visiteurs
+        date: new Date().toISOString().split('T')[0],
+        status: signalement.dernierStatut || 'nouveau',
         surface: signalement.surface,
         budget: signalement.budget,
-        entreprise: signalement.entreprise.nom
+        entreprise: signalement.entreprise || 'N/A'
       }));
       
+      console.log('Problèmes mappés:', mappedProblems);
       setProblems(mappedProblems);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -82,24 +96,49 @@ export default function VisitorMap() {
   // Icônes personnalisées pour les marqueurs
   const createCustomIcon = (status) => {
     const colors = {
-      'nouveau': '#ef4444',
-      'en cours': '#f59e0b',
-      'terminé': '#10b981'
+      'nouveau': '#ef4444',      // Rouge
+      'en_cours': '#f59e0b',     // Jaune/Orange
+      'en cours': '#f59e0b',     // Jaune/Orange (fallback)
+      'termine': '#10b981',      // Vert
+      'terminé': '#10b981',      // Vert (fallback)
+      'resolu': '#10b981'        // Vert
     };
+    
+    const color = colors[status] || colors['nouveau']; // Par défaut rouge
     
     return L.divIcon({
       className: 'custom-marker',
-      html: `<div style="background-color: ${colors[status]}; width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>`,
+      html: `<div style="background-color: ${color}; width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>`,
       iconSize: [32, 32],
       iconAnchor: [16, 16],
     });
+  };
+
+  // Composant pour ajuster automatiquement la vue de la carte
+  const AutoFitBounds = ({ problems }) => {
+    const map = useMap();
+    
+    useEffect(() => {
+      if (problems.length > 0) {
+        const validProblems = problems.filter(p => p.lat && p.lng);
+        if (validProblems.length > 0) {
+          const bounds = L.latLngBounds(validProblems.map(p => [p.lat, p.lng]));
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        }
+      }
+    }, [problems, map]);
+    
+    return null;
   };
 
   const getStatusLabel = (status) => {
     const labels = {
       'nouveau': 'Nouveau',
       'en cours': 'En cours',
-      'terminé': 'Terminé'
+      'en_cours': 'En cours',
+      'terminé': 'Terminé',
+      'termine': 'Terminé',
+      'resolu': 'Résolu'
     };
     return labels[status] || status;
   };
@@ -246,6 +285,7 @@ export default function VisitorMap() {
                     tileerror: handleTileError
                   }}
                 />
+                <AutoFitBounds problems={problems} />
                 {problems.map((problem) => (
                   <Marker 
                     key={problem.id}
@@ -309,6 +349,7 @@ export default function VisitorMap() {
                               className="popup-link"
                               onClick={(e) => {
                                 e.preventDefault();
+                                console.log('Navigation vers signalement ID:', problem.id);
                                 navigate(`/signalement/${problem.id}`);
                               }}
                             >
