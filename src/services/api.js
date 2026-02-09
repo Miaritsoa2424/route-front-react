@@ -101,7 +101,7 @@ export const userService = {
 // Signalements
 export const signalementService = {
   getAllSignalements: async () => {
-    const response = await fetchWithoutAuth(`${API_BASE_URL}/signalements`);
+    const response = await fetchWithoutAuth(`${API_BASE_URL}/signalements/dto`);
     return response.json();
   },
 
