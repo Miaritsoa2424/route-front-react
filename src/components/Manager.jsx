@@ -162,6 +162,9 @@ export default function Manager() {
   // Sauvegarder les modifications (insère un nouveau signalement statut)
   const handleSaveEdit = async () => {
     try {
+      // Trouver le signalement original pour récupérer l'utilisateur créateur
+      const originalSignalement = originalSignalements.find(sig => sig.idSignalement === editingId);
+      
       // Mapper le statut à l'id
       const statusMap = {
         'en_attente': 1,
@@ -174,7 +177,7 @@ export default function Manager() {
       const newSignalementStatut = {
         dateStatut: new Date().toISOString(),
         // Mbola tsy vita ny authentification
-        user: { idUser: 1 }, // Utilisateur connecté, à adapter
+        user: { idUser: originalSignalement.user.idUser }, // Utilisateur qui a créé le signalement
         statutSignalement: { idStatut: idStatut },
         signalement: { idSignalement: editingId }
       };
