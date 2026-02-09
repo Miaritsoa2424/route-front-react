@@ -34,6 +34,8 @@ export default function VisitorMap() {
     avancementGlobal: 0
   });
   const [loading, setLoading] = useState(true);
+  const [tileUrl, setTileUrl] = useState("http://localhost:8090/tile/{z}/{x}/{y}.png");
+  const [usingOnlineMap, setUsingOnlineMap] = useState(false);
 
   // Charger les données au montage
   useEffect(() => {
@@ -113,6 +115,15 @@ export default function VisitorMap() {
 
   const formatCurrency = (amount) => {
     return `${(amount / 1000000).toFixed(1)}M Ar`;
+  };
+
+  // Fonction pour gérer l'erreur de chargement des tuiles
+  const handleTileError = () => {
+    if (!usingOnlineMap) {
+      console.log('Serveur de carte offline indisponible, bascule vers le serveur online...');
+      setTileUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+      setUsingOnlineMap(true);
+    }
   };
 
   return (
@@ -230,7 +241,10 @@ export default function VisitorMap() {
               >
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  url={tileUrl}
+                  eventHandlers={{
+                    tileerror: handleTileError
+                  }}
                 />
                 {problems.map((problem) => (
                   <Marker 
