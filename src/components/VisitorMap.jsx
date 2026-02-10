@@ -9,7 +9,10 @@ import {
   Maximize, 
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  RefreshCw,
+  Navigation,
+  Activity
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -54,7 +57,6 @@ export default function VisitorMap() {
         setStats(statsData);
       } catch (statsError) {
         console.warn('Impossible de récupérer les stats:', statsError);
-        // Utiliser des valeurs par défaut
         setStats({
           nbSignalement: 0,
           budgetTotal: 0,
@@ -77,7 +79,7 @@ export default function VisitorMap() {
       
       // Mapper les signalements avec leurs vrais statuts
       const mappedProblems = statuts.map(statut => ({
-        id: statut.signalement.idSignalement,  // ID PostgreSQL pour la navigation
+        id: statut.signalement.idSignalement,
         lat: statut.signalement.latitude,
         lng: statut.signalement.longitude,
         type: 'Signalement routier',
@@ -87,8 +89,9 @@ export default function VisitorMap() {
         surface: statut.signalement.surface,
         budget: statut.signalement.budget,
         entreprise: statut.signalement.entreprise?.nom || 'Anonyme',
-        niveau: 2  // Niveau par défaut, sera remplacé par API plus tard
+        niveau: 2
       }));      
+
       // Calculer l'avancement global
       const totalSignalements = mappedProblems.length;
       if (totalSignalements > 0) {
@@ -96,18 +99,16 @@ export default function VisitorMap() {
         const nbEnCours = mappedProblems.filter(p => p.status === 'en cours').length;
         const nbTermine = mappedProblems.filter(p => p.status === 'terminé').length;
         
-        // Nouveau = 0%, En cours = 50%, Terminé = 100%
         const avancementCalcule = Math.round(
           (nbNouveau * 0 + nbEnCours * 50 + nbTermine * 100) / totalSignalements
         );
         
-        // Mettre à jour les stats avec l'avancement calculé
         setStats(prev => ({
           ...prev,
           avancementGlobal: avancementCalcule
         }));
       }      
-      console.log('Problèmes mappés avec statuts:', mappedProblems);
+
       setProblems(mappedProblems);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -140,15 +141,14 @@ export default function VisitorMap() {
         throw new Error(errorMessage);
       }
 
-      // Succès - recharger les données
       await loadData();
-      setMessage('✓ Données rechargées avec succès');
+      setMessage('Données mises à jour avec succès');
       setMessageType('success');
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 4000);
 
     } catch (error) {
       console.error("Erreur de synchronisation:", error);
-      setMessage(`✗ ${error.message}`);
+      setMessage(error.message);
       setMessageType('error');
       setTimeout(() => setMessage(''), 5000);
     } finally {
@@ -156,7 +156,7 @@ export default function VisitorMap() {
     }
   };
 
-  // Calculs statistiques (utiliser les stats de l'API)
+  // Calculs statistiques
   const totalProblems = stats.nbSignalement;
   const totalSurface = stats.surfaceTotal;
   const totalBudget = stats.budgetTotal;
@@ -165,15 +165,15 @@ export default function VisitorMap() {
   // Icônes personnalisées pour les marqueurs
   const createCustomIcon = (status) => {
     const colors = {
-      'nouveau': '#ef4444',      // Rouge
-      'en_cours': '#f59e0b',     // Jaune/Orange
-      'en cours': '#f59e0b',     // Jaune/Orange (fallback)
-      'termine': '#10b981',      // Vert
-      'terminé': '#10b981',      // Vert (fallback)
-      'resolu': '#10b981'        // Vert
+      'nouveau': '#ef4444',
+      'en_cours': '#f59e0b',
+      'en cours': '#f59e0b',
+      'termine': '#10b981',
+      'terminé': '#10b981',
+      'resolu': '#10b981'
     };
     
-    const color = colors[status] || colors['nouveau']; // Par défaut rouge
+    const color = colors[status] || colors['nouveau'];
     
     return L.divIcon({
       className: 'custom-marker',
@@ -230,7 +230,6 @@ export default function VisitorMap() {
     }).format(amount);
   };
 
-  // Fonction pour gérer l'erreur de chargement des tuiles
   const handleTileError = () => {
     if (!usingOnlineMap) {
       console.log('Serveur de carte offline indisponible, bascule vers le serveur online...');
@@ -241,164 +240,164 @@ export default function VisitorMap() {
 
   return (
     <div className="visitor-container">
-      {/* Navbar améliorée */}
+      {/* Toast Notification */}
+      {message && (
+        <div className={`toast-notification ${messageType}`}>
+          <div className="toast-icon">
+            {messageType === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+          </div>
+          <span className="toast-message">{message}</span>
+        </div>
+      )}
+
+      {/* Navbar moderne */}
       <nav className="navbar">
         <div className="navbar-background"></div>
         <div className="navbar-content">
           <div className="navbar-brand">
             <div className="brand-icon-container">
-              <MapPin className="brand-icon" />
+              <Navigation className="brand-icon" />
             </div>
             <div className="brand-text-container">
               <span className="brand-text">Signalement Routier</span>
-              <span className="brand-location">Antananarivo, Madagascar</span>
+              <span className="brand-location">
+                <MapPin size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                Antananarivo, Madagascar
+              </span>
             </div>
           </div>
-          <button 
-            className="login-nav-button"
-            onClick={() => navigate('/login')}
-          >
-            <LogIn size={18} />
-            <span>Se connecter</span>
-          </button>
-          <button 
-            className="sync-button"
-            onClick={handleSync}
-            disabled={syncing}
-            style={{
-              marginLeft: '10px',
-              padding: '8px 16px',
-              backgroundColor: syncing ? '#94a3b8' : '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: syncing ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s'
-            }}
-          >
-            {syncing ? (
-              <>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid white',
-                  borderTopColor: 'transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-                <span>Chargement...</span>
-              </>
-            ) : (
-              <>
-                <TrendingUp size={18} />
-                <span>Rafraîchir les données</span>
-              </>
-            )}
-          </button>
+          
+          <div className="navbar-actions">
+            <button 
+              className="refresh-button"
+              onClick={handleSync}
+              disabled={syncing}
+              title="Actualiser les données"
+            >
+              <RefreshCw size={18} className={syncing ? 'spinning' : ''} />
+              <span>{syncing ? 'Actualisation...' : 'Actualiser'}</span>
+            </button>
+            
+            <button 
+              className="login-nav-button"
+              onClick={() => navigate('/login')}
+            >
+              <LogIn size={18} />
+              <span>Connexion</span>
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* Contenu principal */}
       <div className="main-content">
-        {/* Message de synchronisation */}
-        {message && (
-          <div style={{
-            position: 'fixed',
-            top: '90px',
-            right: '20px',
-            zIndex: 1000,
-            padding: '12px 20px',
-            backgroundColor: messageType === 'success' ? '#10b981' : '#ef4444',
-            color: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            animation: 'slideIn 0.3s ease-out'
-          }}>
-            {message}
-          </div>
-        )}
-        {/* Tableau de récapitulation */}
+        {/* Tableau de statistiques modernisé */}
         <div className="stats-panel">
           <div className="stats-header">
-            <h2 className="stats-title">Statistiques en temps réel</h2>
-            <span className="stats-subtitle">Vue d'ensemble des signalements</span>
-          </div>
-          {loading ? (
-            <div className="loading-state">
-              <p>Chargement des statistiques...</p>
-            </div>
-          ) : (
-              <div className="stats-grid">
-                <div className="stat-card stat-card-primary">
-                  <div className="stat-icon-wrapper">
-                    <MapPin size={24} />
-                  </div>
-                  <div className="stat-info">
-                    <div className="stat-value">{totalProblems}</div>
-                    <div className="stat-label">Points signalés</div>
-                  </div>
-                </div>
-                <div className="stat-card stat-card-secondary">
-                  <div className="stat-icon-wrapper">
-                    <Maximize size={24} />
-                  </div>
-                  <div className="stat-info">
-                    <div className="stat-value">{totalSurface} m²</div>
-                    <div className="stat-label">Surface totale</div>
-                  </div>
-                </div>
-                <div className="stat-card stat-card-accent">
-                  <div className="stat-icon-wrapper">
-                    <DollarSign size={24} />
-                  </div>
-                  <div className="stat-info">
-                    <div className="stat-value">{formatCurrency(totalBudget)}</div>
-                    <div className="stat-label">Budget total</div>
-                  </div>
-                </div>
-                <div className="stat-card stat-card-success">
-                  <div className="stat-icon-wrapper">
-                    <TrendingUp size={24} />
-                  </div>
-                  <div className="stat-info">
-                    <div className="stat-value">{avancement}%</div>
-                    <div className="stat-label">Avancement global</div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-        {/* Carte */}
-        <div className="map-section">
-          <div className="map-header">
-            <div>
-              <h2 className="map-title">Carte interactive des problèmes</h2>
-              <p className="map-subtitle">Cliquez sur un marqueur pour plus de détails</p>
-            </div>
-            <div className="map-legend">
-              <div className="legend-item">
-                <span className="legend-dot legend-dot-new"></span>
-                <span>Nouveau</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-dot legend-dot-progress"></span>
-                <span>En cours</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-dot legend-dot-done"></span>
-                <span>Terminé</span>
+            <div className="stats-header-content">
+              <Activity size={24} className="stats-header-icon" />
+              <div>
+                <h2 className="stats-title">Tableau de bord en direct</h2>
+                <span className="stats-subtitle">Vue d'ensemble des signalements routiers</span>
               </div>
             </div>
           </div>
           
           {loading ? (
             <div className="loading-state">
+              <div className="loading-spinner"></div>
+              <p>Chargement des statistiques...</p>
+            </div>
+          ) : (
+            <div className="stats-grid">
+              <div className="stat-card stat-card-primary">
+                <div className="stat-icon-wrapper stat-icon-primary">
+                  <MapPin size={24} />
+                </div>
+                <div className="stat-info">
+                  <div className="stat-label">Signalements actifs</div>
+                  <div className="stat-value">{totalProblems}</div>
+                  <div className="stat-trend">Total des points</div>
+                </div>
+                <div className="stat-decoration"></div>
+              </div>
+
+              <div className="stat-card stat-card-secondary">
+                <div className="stat-icon-wrapper stat-icon-secondary">
+                  <Maximize size={24} />
+                </div>
+                <div className="stat-info">
+                  <div className="stat-label">Surface concernée</div>
+                  <div className="stat-value">{totalSurface.toLocaleString()} m²</div>
+                  <div className="stat-trend">Zone affectée</div>
+                </div>
+                <div className="stat-decoration"></div>
+              </div>
+
+              <div className="stat-card stat-card-accent">
+                <div className="stat-icon-wrapper stat-icon-accent">
+                  <DollarSign size={24} />
+                </div>
+                <div className="stat-info">
+                  <div className="stat-label">Budget alloué</div>
+                  <div className="stat-value">{formatCurrency(totalBudget)}</div>
+                  <div className="stat-trend">Montant total</div>
+                </div>
+                <div className="stat-decoration"></div>
+              </div>
+
+              <div className="stat-card stat-card-success">
+                <div className="stat-icon-wrapper stat-icon-success">
+                  <TrendingUp size={24} />
+                </div>
+                <div className="stat-info">
+                  <div className="stat-label">Avancement</div>
+                  <div className="stat-value">{avancement}%</div>
+                  <div className="stat-progress-bar">
+                    <div className="stat-progress-fill" style={{ width: `${avancement}%` }}></div>
+                  </div>
+                </div>
+                <div className="stat-decoration"></div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Carte interactive améliorée */}
+        <div className="map-section">
+          <div className="map-header">
+            <div className="map-header-content">
+              <div className="map-title-group">
+                <h2 className="map-title">
+                  <MapPin size={22} className="map-title-icon" />
+                  Carte interactive
+                </h2>
+                <p className="map-subtitle">Explorez les signalements en temps réel • Cliquez pour plus de détails</p>
+              </div>
+              
+              <div className="map-legend">
+                <span className="legend-title">Légende :</span>
+                <div className="legend-items">
+                  <div className="legend-item">
+                    <span className="legend-dot legend-dot-new"></span>
+                    <span>Nouveau</span>
+                  </div>
+                  <div className="legend-item">
+                    <span className="legend-dot legend-dot-progress"></span>
+                    <span>En cours</span>
+                  </div>
+                  <div className="legend-item">
+                    <span className="legend-dot legend-dot-done"></span>
+                    <span>Terminé</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {loading ? (
+            <div className="loading-state">
+              <div className="loading-spinner"></div>
               <p>Chargement de la carte...</p>
             </div>
           ) : (
@@ -434,7 +433,6 @@ export default function VisitorMap() {
                       <div className="popup-content">
                         <div className="popup-header">
                           <h3 className="popup-title">{problem.type}</h3>
-                          {/* Normalize status into a safe CSS class name */}
                           {(() => {
                             const map = {
                               'nouveau': 'nouveau',
@@ -477,7 +475,7 @@ export default function VisitorMap() {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric'
-              })}
+                              })}
                             </span>
                           </div>
                           <div className="popup-row">
@@ -498,7 +496,6 @@ export default function VisitorMap() {
                               className="popup-link"
                               onClick={(e) => {
                                 e.preventDefault();
-                                console.log('Navigation vers signalement ID:', problem.id);
                                 navigate(`/signalement/${problem.id}`);
                               }}
                             >
@@ -512,7 +509,7 @@ export default function VisitorMap() {
                 ))}
               </MapContainer>
             </div>
-            )}
+          )}
         </div>
       </div>
     </div>

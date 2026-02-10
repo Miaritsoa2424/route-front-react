@@ -12,7 +12,10 @@ import {
   Clock,
   Image as ImageIcon,
   X,
-  ZoomIn
+  ZoomIn,
+  ExternalLink,
+  Info,
+  Navigation
 } from 'lucide-react';
 import '../styles/SignalementDetail.css';
 import { signalementService, imageService } from '../services/api';
@@ -33,16 +36,9 @@ export default function SignalementDetail() {
   const loadSignalementDetails = async () => {
     setLoading(true);
     try {
-      console.log('Chargement du signalement ID:', id);
-      // Charger les détails du signalement
       const data = await signalementService.getSignalementById(id);
-      console.log('Données du signalement:', data);
-      
-      // Charger les images du signalement
       const imagesData = await imageService.getImagesBySignalement(id);
-      console.log('Données des images:', imagesData);
       
-      // Transformer les images en format compatible avec le composant
       const formattedImages = imagesData.map(img => ({
         id: img.id,
         url: img.lien,
@@ -51,15 +47,10 @@ export default function SignalementDetail() {
         date: img.date
       }));
       
-      console.log('Images formatées:', formattedImages);
       setImages(formattedImages);
       setSignalement(data);
-      console.log('Avant le return principal, signalement:', data, 'loading:', false);
     } catch (error) {
       console.error('Erreur lors du chargement des détails:', error);
-      // Afficher plus de détails sur l'erreur
-      console.error('Détails de l\'erreur:', error.message);
-      console.error('Stack:', error.stack);
     } finally {
       setLoading(false);
     }
@@ -114,6 +105,7 @@ export default function SignalementDetail() {
     return (
       <div className="signalement-detail-container">
         <div className="loading-state">
+          <div className="loading-spinner"></div>
           <p>Chargement des détails...</p>
         </div>
       </div>
@@ -124,9 +116,11 @@ export default function SignalementDetail() {
     return (
       <div className="signalement-detail-container">
         <div className="error-state">
-          <AlertCircle size={48} />
-          <p>Signalement non trouvé</p>
-          <button onClick={() => navigate('/')} className="back-button">
+          <AlertCircle size={64} />
+          <h2>Signalement introuvable</h2>
+          <p>Le signalement que vous recherchez n'existe pas ou a été supprimé.</p>
+          <button onClick={() => navigate('/')} className="back-button-error">
+            <ArrowLeft size={18} />
             Retour à la carte
           </button>
         </div>
@@ -136,19 +130,22 @@ export default function SignalementDetail() {
 
   return (
     <div className="signalement-detail-container">
-      {/* Header */}
+      {/* Header moderne */}
       <header className="detail-header">
-        <div className="header-background"></div>
+        <div className="header-background">
+          <div className="header-gradient"></div>
+        </div>
         <div className="header-content">
           <button 
             className="back-button-nav"
             onClick={() => navigate('/')}
           >
             <ArrowLeft size={20} />
-            <span>Retour à la carte</span>
+            <span>Retour</span>
           </button>
-          <div className="header-title-section">
-            <h1 className="detail-title">Détails du signalement #{signalement.idSignalement}</h1>
+          
+          <div className="header-info">
+            <span className="detail-title">Détails du signalement #{signalement.idSignalement}</span>
           </div>
         </div>
       </header>
@@ -156,20 +153,26 @@ export default function SignalementDetail() {
       {/* Main Content */}
       <div className="detail-main-content">
         <div className="detail-grid">
-          {/* Left Column - Photos */}
+          {/* Galerie Photos */}
           <div className="photos-section">
             <div className="section-header">
-              <ImageIcon size={24} />
-              <h2>Photos du signalement</h2>
+              <div className="section-header-icon">
+                <ImageIcon size={22} />
+              </div>
+              <div>
+                <h2 className="section-title">Galerie photos</h2>
+                <p className="section-subtitle">{images.length} photo{images.length > 1 ? 's' : ''} disponible{images.length > 1 ? 's' : ''}</p>
+              </div>
             </div>
             
             {images && images.length > 0 ? (
               <div className="photos-grid">
-                {images.map((photo) => (
+                {images.map((photo, index) => (
                   <div 
                     key={photo.id} 
                     className="photo-card"
                     onClick={() => openLightbox(photo)}
+                    style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className="photo-wrapper">
                       <img 
@@ -178,8 +181,10 @@ export default function SignalementDetail() {
                         className="photo-img"
                       />
                       <div className="photo-overlay">
-                        <ZoomIn size={32} />
-                        <span>Agrandir</span>
+                        <div className="photo-overlay-content">
+                          <ZoomIn size={32} />
+                          <span>Agrandir</span>
+                        </div>
                       </div>
                     </div>
                     <div className="photo-info">
@@ -190,83 +195,85 @@ export default function SignalementDetail() {
               </div>
             ) : (
               <div className="no-photos">
-                <ImageIcon size={48} />
-                <p>Aucune photo disponible</p>
+                <div className="no-photos-icon">
+                  <ImageIcon size={64} />
+                </div>
+                <h3>Aucune photo disponible</h3>
+                <p>Aucune photo n'a été ajoutée pour ce signalement.</p>
               </div>
             )}
           </div>
 
-          {/* Right Column - Information */}
+          {/* Informations détaillées */}
           <div className="info-section">
             <div className="section-header">
-              <MapPin size={24} />
-              <h2>Informations détaillées</h2>
+              <div className="section-header-icon">
+                <Info size={22} />
+              </div>
+              <div>
+                <h2 className="section-title">Informations</h2>
+                <p className="section-subtitle">Détails techniques et localisation</p>
+              </div>
             </div>
+            
             <div className="info-content">
-              {signalement.dateSignalement && (
-                <div className="info-item">
-                  <Calendar size={18} />
-                  <div>
-                    <span className="info-label">Date du signalement</span>
-                    <p className="info-value">{new Date(signalement.dateSignalement).toLocaleDateString('fr-FR')}</p>
-                  </div>
+              <div className="info-card">
+                <div className="info-card-icon">
+                  <MapPin size={20} />
                 </div>
-              )}
-
-              <div className="info-item">
-                <MapPin size={18} />
-                <div>
-                  <span className="info-label">Localisation</span>
+                <div className="info-card-content">
+                  <span className="info-label">Coordonnées GPS</span>
                   <p className="info-value">{signalement.latitude}, {signalement.longitude}</p>
                 </div>
               </div>
 
-              <div className="info-item">
-                <Maximize size={18} />
-                <div>
-                  <span className="info-label">Surface</span>
+              <div className="info-card">
+                <div className="info-card-icon">
+                  <Maximize size={20} />
+                </div>
+                <div className="info-card-content">
+                  <span className="info-label">Surface affectée</span>
                   <p className="info-value">{signalement.surface} m²</p>
                 </div>
               </div>
 
-              <div className="info-item">
-                <DollarSign size={18} />
-                <div>
+              <div className="info-card">
+                <div className="info-card-icon">
+                  <DollarSign size={20} />
+                </div>
+                <div className="info-card-content">
                   <span className="info-label">Budget estimé</span>
                   <p className="info-value">{formatCurrency(signalement.budget)}</p>
                 </div>
               </div>
 
-              <div className="info-item">
-                <Building2 size={18} />
-                <div>
+              <div className="info-card">
+                <div className="info-card-icon">
+                  <Building2 size={20} />
+                </div>
+                <div className="info-card-content">
                   <span className="info-label">Entreprise responsable</span>
                   <p className="info-value">{signalement.entreprise?.nom || 'Non assignée'}</p>
                 </div>
               </div>
 
               {signalement.description && (
-                <div className="info-item full-width">
-                  <AlertCircle size={18} />
-                  <div>
-                    <span className="info-label">Description</span>
-                    <p className="info-value" style={{
-                      fontSize: '14px',
-                      fontStyle: 'italic',
-                      color: '#64748b',
-                      lineHeight: '1.6'
-                    }}>{signalement.description}</p>
+                <div className="description-card">
+                  <div className="description-header">
+                    <AlertCircle size={20} />
+                    <h3>Description du problème</h3>
                   </div>
+                  <p className="description-text">{signalement.description}</p>
                 </div>
               )}
 
-              <div className="info-item full-width">
+              <div className="action-section">
                 <button 
                   className="maps-button"
                   onClick={() => window.open(`https://www.google.com/maps?q=${signalement.latitude},${signalement.longitude}`, '_blank')}
                 >
-                  <MapPin size={18} />
-                  Voir sur Google Maps
+                  <ExternalLink size={20} />
+                  <span>Ouvrir dans Google Maps</span>
                 </button>
               </div>
             </div>
@@ -274,7 +281,7 @@ export default function SignalementDetail() {
         </div>
       </div>
 
-      {/* Lightbox */}
+      {/* Lightbox améliorée */}
       {lightboxOpen && selectedPhoto && (
         <div className="lightbox" onClick={closeLightbox}>
           <button className="lightbox-close" onClick={closeLightbox}>
@@ -282,12 +289,17 @@ export default function SignalementDetail() {
           </button>
           
           <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
-            <img 
-              src={selectedPhoto.url} 
-              alt={selectedPhoto.description}
-              className="lightbox-img"
-            />
+            <div className="lightbox-image-container">
+              <img 
+                src={selectedPhoto.url} 
+                alt={selectedPhoto.description}
+                className="lightbox-img"
+              />
+            </div>
             <div className="lightbox-info">
+              <div className="lightbox-info-icon">
+                <ImageIcon size={20} />
+              </div>
               <p className="lightbox-description">{selectedPhoto.description}</p>
             </div>
           </div>
