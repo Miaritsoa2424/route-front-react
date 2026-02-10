@@ -511,6 +511,13 @@ export default function Manager() {
           Liste des utilisateurs
         </button>
         <button
+          className="entreprises-list-button"
+          onClick={() => navigate('/manager/entreprises')}
+        >
+          <Users size={18} />
+          Liste des entreprises
+        </button>
+        <button
           className="unblock-users-button"
           onClick={() => navigate('/manager/unblock-users')}
         >

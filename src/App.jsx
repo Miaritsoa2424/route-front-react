@@ -6,6 +6,7 @@ import Manager from './components/Manager';
 import UnblockUsers from './components/UnblockUsers';
 import CreateUser from './components/CreateUser';
 import UsersList from './components/UsersList';
+import CompaniesList from './components/CompaniesList';
 import './App.css';
 
 function App() {
@@ -32,6 +33,8 @@ function App() {
         
         {/* Page liste des utilisateurs */}
         <Route path="/manager/users-list" element={<UsersList />} />
+        {/* Page liste des entreprises */}
+        <Route path="/manager/entreprises" element={<CompaniesList />} />
       </Routes>
     </Router>
   );
