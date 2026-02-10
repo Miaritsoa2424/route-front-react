@@ -312,7 +312,6 @@ export default function Manager() {
                         <div className="form-group full-width">
                           <label>Statut</label>
                           <div className="status-selector">
-                            {['en_attente', 'en_cours', 'resolu', 'rejete'].map(status => (
                               <button
                                 key={status}
                                 className={`status-option ${editFormData.status === status ? 'active' : ''}`}
