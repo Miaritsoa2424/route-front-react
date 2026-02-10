@@ -648,6 +648,17 @@
   min-height: 80px;
 }
 
+/* Forcer fond blanc / texte noir sur inputs, selects et textareas (y compris modals) */
+.modal input,
+.modal select,
+.modal textarea,
+select,
+input,
+textarea {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
 /* Sélecteur de statut */
 .status-selector {
   display: grid;

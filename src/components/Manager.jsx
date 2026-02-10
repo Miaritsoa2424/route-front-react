@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, UserPlus, Users, Unlock, CheckCircle, AlertCircle } from 'lucide-react';
-import { signalementService, signalementStatutService, API_BASE_URL } from '../services/api';
+import { signalementService, signalementStatutService, API_BASE_URL, entrepriseService } from '../services/api';
 import '../styles/Manager.css';
 
 
@@ -23,6 +23,11 @@ export default function Manager() {
   const [niveauModalOpen, setNiveauModalOpen] = useState(false);
   const [niveauValue, setNiveauValue] = useState('');
   const [currentNiveauSignalementId, setCurrentNiveauSignalementId] = useState(null);
+  const [entreprises, setEntreprises] = useState([]);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignSurface, setAssignSurface] = useState('');
+  const [selectedEntrepriseId, setSelectedEntrepriseId] = useState(null);
+  const [assignSignalementId, setAssignSignalementId] = useState(null);
 
   const fetchWithAuth = async (url, options = {}) => {
     const token = localStorage.getItem('token');
@@ -464,6 +469,47 @@ export default function Manager() {
     showMessage('✓ Niveau enregistré avec succès', 'success');
   };
 
+  // Assigner un signalement à une entreprise
+  const openAssignModal = async (signalementId) => {
+    setAssignSignalementId(signalementId);
+    setAssignSurface('');
+    setSelectedEntrepriseId(null);
+    setAssignModalOpen(true);
+    try {
+      const data = await entrepriseService.getAllEntreprises();
+      setEntreprises(data || []);
+    } catch (e) {
+      console.error('Erreur chargement entreprises', e);
+      showMessage('Impossible de charger les entreprises', 'error');
+    }
+  };
+
+  const closeAssignModal = () => {
+    setAssignSignalementId(null);
+    setAssignSurface('');
+    setSelectedEntrepriseId(null);
+    setAssignModalOpen(false);
+  };
+
+  const handleAssign = () => {
+    if (assignSignalementId == null) return;
+    const surfaceVal = assignSurface === '' ? null : Number(assignSurface);
+    const entrepriseObj = entreprises.find(e => String(e.idEntreprise) === String(selectedEntrepriseId));
+    const entrepriseName = entrepriseObj ? entrepriseObj.nom : null;
+
+    setSignalements(prev => prev.map(s => s.id === assignSignalementId ? {
+      ...s,
+      surface: surfaceVal,
+      entreprise: entrepriseName
+    } : s));
+
+    // Also update originalSignalements if matching idSignalement exists
+    setOriginalSignalements(prev => prev.map(o => (o.idSignalement === assignSignalementId ? { ...o, surface: surfaceVal, entreprise: entrepriseName } : o)));
+
+    closeAssignModal();
+    showMessage('✓ Signalement assigné à l\'entreprise', 'success');
+  };
+
   // Fonction utilitaire pour afficher un message
   const showMessage = (message, type = 'success') => {
     setSuccessMessage(message);
@@ -762,6 +808,18 @@ export default function Manager() {
                               Déterminer le niveau
                             </button>
                           )}
+                          <button
+                            className="action-button assign"
+                            onClick={() => openAssignModal(signalement.id)}
+                            style={{
+                              background: '#fff',
+                              color: '#333',
+                              border: '1px solid #ccc',
+                              fontWeight: '600'
+                            }}
+                          >
+                            Assigner à une entreprise
+                          </button>
                         </div>
                       </div>
                     )}
@@ -844,7 +902,7 @@ export default function Manager() {
               left: 0,
               width: '100%',
               height: '100%',
-              background: 'rgba(0,0,0,0.6)',
+              background: 'rgba(255,255,255,0.6)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -939,6 +997,66 @@ Enregistrer le niveau</button>
                   onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
                   onMouseLeave={(e) => e.target.style.background = '#f5f5f5'}
                 >❌ Annuler</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal pour assigner à une entreprise */}
+        {assignModalOpen && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'rgba(255,255,255,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999
+            }}
+            onClick={closeAssignModal}
+          >
+            <div
+              className="modal"
+              style={{
+                background: '#fff',
+                padding: '20px',
+                borderRadius: '10px',
+                width: '92%',
+                maxWidth: '520px',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.12)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ marginTop: 0 }}>Assigner à une entreprise</h3>
+              <div className="modal-body">
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Surface (m²)</label>
+                <input
+                  type="number"
+                  value={assignSurface}
+                  onChange={(e) => setAssignSurface(e.target.value)}
+                  placeholder="Surface en m²"
+                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px', boxSizing: 'border-box' }}
+                />
+
+                <label style={{ display: 'block', marginTop: '12px', marginBottom: '8px', fontWeight: 600 }}>Entreprise</label>
+                <select
+                  value={selectedEntrepriseId || ''}
+                  onChange={(e) => setSelectedEntrepriseId(e.target.value)}
+                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px' }}
+                >
+                  <option value="">-- Choisir une entreprise --</option>
+                  {entreprises.map(ent => (
+                    <option key={ent.idEntreprise} value={ent.idEntreprise}>{ent.nom} {ent.dernierPrix != null ? `- ${Number(ent.dernierPrix).toLocaleString('fr-FR')} Ar/m²` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button className="action-button save" onClick={handleAssign} style={{ padding: '8px 14px', borderRadius: '6px' }}>Assigner</button>
+                <button className="action-button cancel" onClick={closeAssignModal} style={{ padding: '8px 14px', borderRadius: '6px' }}>Annuler</button>
               </div>
             </div>
           </div>
