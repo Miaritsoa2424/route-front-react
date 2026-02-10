@@ -250,7 +250,12 @@ export default function SignalementDetail() {
                   <AlertCircle size={18} />
                   <div>
                     <span className="info-label">Description</span>
-                    <p className="info-value">{signalement.description}</p>
+                    <p className="info-value" style={{
+                      fontSize: '14px',
+                      fontStyle: 'italic',
+                      color: '#64748b',
+                      lineHeight: '1.6'
+                    }}>{signalement.description}</p>
                   </div>
                 </div>
               )}

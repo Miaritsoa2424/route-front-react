@@ -81,13 +81,32 @@ export default function VisitorMap() {
         lat: statut.signalement.latitude,
         lng: statut.signalement.longitude,
         type: 'Signalement routier',
+        description: statut.signalement.description || 'Description non disponible pour le moment',
         date: statut.dateStatut || new Date().toISOString().split('T')[0],
         status: statusIdMap[statut.statutSignalement.idStatut] || 'nouveau',
         surface: statut.signalement.surface,
         budget: statut.signalement.budget,
-        entreprise: statut.signalement.entreprise?.nom || 'N/A'
-      }));
-      
+        entreprise: statut.signalement.entreprise?.nom || 'Anonyme',
+        niveau: 2  // Niveau par défaut, sera remplacé par API plus tard
+      }));      
+      // Calculer l'avancement global
+      const totalSignalements = mappedProblems.length;
+      if (totalSignalements > 0) {
+        const nbNouveau = mappedProblems.filter(p => p.status === 'nouveau').length;
+        const nbEnCours = mappedProblems.filter(p => p.status === 'en cours').length;
+        const nbTermine = mappedProblems.filter(p => p.status === 'terminé').length;
+        
+        // Nouveau = 0%, En cours = 50%, Terminé = 100%
+        const avancementCalcule = Math.round(
+          (nbNouveau * 0 + nbEnCours * 50 + nbTermine * 100) / totalSignalements
+        );
+        
+        // Mettre à jour les stats avec l'avancement calculé
+        setStats(prev => ({
+          ...prev,
+          avancementGlobal: avancementCalcule
+        }));
+      }      
       console.log('Problèmes mappés avec statuts:', mappedProblems);
       setProblems(mappedProblems);
     } catch (error) {
@@ -433,13 +452,32 @@ export default function VisitorMap() {
                         </div>
                         <div className="popup-body">
                           <div className="popup-row">
+                            <span className="popup-label">Niveau</span>
+                            <span className="popup-value" style={{
+                              backgroundColor: '#fbbf24',
+                              color: 'white',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}>{problem.niveau}</span>
+                          </div>
+                          <div className="popup-row">
+                            <span className="popup-label">Description</span>
+                            <span className="popup-value" style={{
+                              fontSize: '13px',
+                              fontStyle: 'italic',
+                              color: '#64748b'
+                            }}>{problem.description}</span>
+                          </div>
+                          <div className="popup-row">
                             <span className="popup-label">Date de signalement</span>
                             <span className="popup-value">
                               {new Date(problem.date).toLocaleDateString('fr-FR', {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric'
-                              })}
+              })}
                             </span>
                           </div>
                           <div className="popup-row">
