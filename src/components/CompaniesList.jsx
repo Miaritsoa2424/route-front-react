@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { entrepriseService } from '../services/api';
 import '../styles/Manager.css';
+import '../styles/CompaniesList.css';
 
 export default function CompaniesList() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export default function CompaniesList() {
                 {entreprises.map(ent => (
                   <tr key={ent.idEntreprise}>
                     <td>{ent.nom}</td>
-                    <td>{ent.dernierPrix != null ? Number(ent.dernierPrix).toLocaleString('fr-FR') : 'A définir'}</td>
+                    <td>{ent.dernierPrix != null ? Number(ent.dernierPrix).toLocaleString('fr-FR') : 'A définir'} Ar</td>
                   </tr>
                 ))}
               </tbody>
