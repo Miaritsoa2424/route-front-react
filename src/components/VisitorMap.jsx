@@ -34,6 +34,9 @@ export default function VisitorMap() {
     avancementGlobal: 0
   });
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // 'success' ou 'error'
   const [tileUrl, setTileUrl] = useState("http://localhost:8090/tile/{z}/{x}/{y}.png");
   const [usingOnlineMap, setUsingOnlineMap] = useState(false);
 
@@ -60,29 +63,77 @@ export default function VisitorMap() {
         });
       }
 
-      // Récupérer les signalements
-      const signalements = await signalementService.getAllSignalements();
-      console.log('Signalements récupérés:', signalements);
+      // Récupérer les derniers statuts avec les signalements associés
+      const statutsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/signalement-statuts/latest`);
+      const statuts = await statutsResponse.json();
       
-      // Mapper les signalements PostgreSQL au format des problèmes
-      const mappedProblems = signalements.map(signalement => ({
-        id: signalement.idSignalement,  // ID PostgreSQL pour la navigation
-        lat: signalement.latitude,
-        lng: signalement.longitude,
+      // Mapper les IDs de statut aux labels internes
+      const statusIdMap = {
+        1: 'nouveau',
+        2: 'en cours',
+        3: 'terminé',
+        4: 'rejete'
+      };
+      
+      // Mapper les signalements avec leurs vrais statuts
+      const mappedProblems = statuts.map(statut => ({
+        id: statut.signalement.idSignalement,  // ID PostgreSQL pour la navigation
+        lat: statut.signalement.latitude,
+        lng: statut.signalement.longitude,
         type: 'Signalement routier',
-        date: signalement.dateSignalement || new Date().toISOString().split('T')[0],
-        status: 'nouveau',  // Statut par défaut (peut être amélioré avec les statuts)
-        surface: signalement.surface,
-        budget: signalement.budget,
-        entreprise: signalement.entreprise?.nom || 'N/A'
+        date: statut.dateStatut || new Date().toISOString().split('T')[0],
+        status: statusIdMap[statut.statutSignalement.idStatut] || 'nouveau',
+        surface: statut.signalement.surface,
+        budget: statut.signalement.budget,
+        entreprise: statut.signalement.entreprise?.nom || 'N/A'
       }));
       
-      console.log('Problèmes mappés:', mappedProblems);
+      console.log('Problèmes mappés avec statuts:', mappedProblems);
       setProblems(mappedProblems);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fonction de synchronisation
+  const handleSync = async () => {
+    setSyncing(true);
+    setMessage('');
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/signalements/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        let errorMessage = `Erreur serveur (${response.status})`;
+        try {
+          const errorBody = await response.json();
+          errorMessage = errorBody.message || errorMessage;
+        } catch (e) {
+          // Si le body n'est pas du JSON
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Succès - recharger les données
+      await loadData();
+      setMessage('✓ Données rechargées avec succès');
+      setMessageType('success');
+      setTimeout(() => setMessage(''), 3000);
+
+    } catch (error) {
+      console.error("Erreur de synchronisation:", error);
+      setMessage(`✗ ${error.message}`);
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -191,11 +242,67 @@ export default function VisitorMap() {
             <LogIn size={18} />
             <span>Se connecter</span>
           </button>
+          <button 
+            className="sync-button"
+            onClick={handleSync}
+            disabled={syncing}
+            style={{
+              marginLeft: '10px',
+              padding: '8px 16px',
+              backgroundColor: syncing ? '#94a3b8' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: syncing ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s'
+            }}
+          >
+            {syncing ? (
+              <>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid white',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <span>Chargement...</span>
+              </>
+            ) : (
+              <>
+                <TrendingUp size={18} />
+                <span>Rafraîchir les données</span>
+              </>
+            )}
+          </button>
         </div>
       </nav>
 
       {/* Contenu principal */}
       <div className="main-content">
+        {/* Message de synchronisation */}
+        {message && (
+          <div style={{
+            position: 'fixed',
+            top: '90px',
+            right: '20px',
+            zIndex: 1000,
+            padding: '12px 20px',
+            backgroundColor: messageType === 'success' ? '#10b981' : '#ef4444',
+            color: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            animation: 'slideIn 0.3s ease-out'
+          }}>
+            {message}
+          </div>
+        )}
         {/* Tableau de récapitulation */}
         <div className="stats-panel">
           <div className="stats-header">
