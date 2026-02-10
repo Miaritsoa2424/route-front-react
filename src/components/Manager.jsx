@@ -619,68 +619,44 @@ export default function Manager() {
                 {expandedId === signalement.id && (
                   <div className="signalement-details">
                     {editingId === signalement.id ? (
-                      // Formulaire d'édition
-                      <div className="edit-form">
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label>Type</label>
-                            <input
-                              type="text"
-                              value={editFormData.type}
-                              onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value })}
-                            />
+                      // Formulaire d'édition — seul le statut est modifiable
+                      <div className="edit-form" style={{ padding: '16px' }}>
+                        <div className="detail-row">
+                          <div className="detail-item">
+                            <span className="label">Type</span>
+                            <span className="value">{editFormData.type}</span>
                           </div>
-                          <div className="form-group">
-                            <label>Surface (m²)</label>
-                            <input
-                              type="number"
-                              value={editFormData.surface}
-                              onChange={(e) => setEditFormData({ ...editFormData, surface: parseFloat(e.target.value) })}
-                            />
+                          <div className="detail-item">
+                            <span className="label">Surface</span>
+                            <span className="value">{editFormData.surface != null ? `${editFormData.surface} m²` : 'A définir'}</span>
                           </div>
                         </div>
 
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label>Budget (Ar)</label>
-                            <input
-                              type="number"
-                              value={editFormData.budget}
-                              onChange={(e) => setEditFormData({ ...editFormData, budget: parseFloat(e.target.value) })}
-                            />
+                        <div className="detail-row">
+                          <div className="detail-item">
+                            <span className="label">Budget</span>
+                            <span className="value">{editFormData.budget != null ? `${editFormData.budget.toLocaleString('fr-FR')} Ar` : 'A définir'}</span>
                           </div>
-                          <div className="form-group">
-                            <label>Entreprise</label>
-                            <input
-                              type="text"
-                              value={editFormData.entreprise}
-                              onChange={(e) => setEditFormData({ ...editFormData, entreprise: e.target.value })}
-                            />
+                          <div className="detail-item">
+                            <span className="label">Entreprise</span>
+                            <span className="value">{editFormData.entreprise || 'A définir'}</span>
                           </div>
                         </div>
 
-                        <div className="form-group full-width">
-                          <label>Localisation</label>
-                          <input
-                            type="text"
-                            value={editFormData.localisation}
-                            onChange={(e) => setEditFormData({ ...editFormData, localisation: e.target.value })}
-                          />
+                        <div className="detail-full" style={{ marginBottom: '8px' }}>
+                          <span className="label">Localisation</span>
+                          <p className="value" style={{ margin: '4px 0' }}>{editFormData.localisation}</p>
                         </div>
 
-                        <div className="form-group full-width">
-                          <label>Description</label>
-                          <textarea
-                            value={editFormData.description}
-                            onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                            rows="3"
-                          ></textarea>
+                        <div className="detail-full" style={{ marginBottom: '12px' }}>
+                          <span className="label">Description</span>
+                          <p className="value" style={{ margin: '4px 0' }}>{editFormData.description}</p>
                         </div>
 
-                        <div className="form-group full-width">
-                          <label>Statut</label>
+                        <div className="form-group full-width" style={{ marginBottom: '12px' }}>
+                          <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Statut</label>
                           <div className="status-selector">
-                            {['signale', 'en_cours', 'termine', 'rejete'].map(status => (
+                            {['en_attente', 'en_cours', 'resolu', 'rejete'].map(status => (
                               <button
                                 key={status}
                                 className={`status-option ${editFormData.status === status ? 'active' : ''}`}
@@ -692,7 +668,7 @@ export default function Manager() {
                           </div>
                         </div>
 
-                        <div className="form-actions">
+                        <div className="form-actions" style={{ marginTop: '12px' }}>
                           <button
                             className="action-button save"
                             onClick={handleSaveEdit}
