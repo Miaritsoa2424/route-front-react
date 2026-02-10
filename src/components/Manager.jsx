@@ -13,6 +13,7 @@ export default function Manager() {
   const [syncing, setSyncing] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [messageType, setMessageType] = useState('success'); // 'success' ou 'error'
   const [editFormData, setEditFormData] = useState({});
@@ -195,6 +196,7 @@ export default function Manager() {
 
   // Sauvegarder les modifications (insère un nouveau signalement statut)
   const handleSaveEdit = async () => {
+    setSaving(true);
     try {
       // Trouver le signalement original pour récupérer l'utilisateur créateur
       const originalSignalement = originalSignalements.find(sig => sig.idSignalement === editingId);
@@ -228,6 +230,8 @@ export default function Manager() {
     } catch (error) {
       console.error('Erreur lors de la création:', error);
       showMessage('✗ Erreur lors de la création du statut', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -717,12 +721,28 @@ export default function Manager() {
                           <button
                             className="action-button save"
                             onClick={handleSaveEdit}
+                            disabled={saving}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: saving ? 0.7 : 1 }}
                           >
-                            Sauvegarder
+                            {saving && (
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  width: '16px',
+                                  height: '16px',
+                                  border: '2px solid rgba(255,255,255,0.3)',
+                                  borderTopColor: '#fff',
+                                  borderRadius: '50%',
+                                  animation: 'spin 0.8s linear infinite'
+                                }}
+                              />
+                            )}
+                            {saving ? 'Sauvegarde en cours...' : 'Sauvegarder'}
                           </button>
                           <button
                             className="action-button cancel"
                             onClick={handleCancelEdit}
+                            disabled={saving}
                           >
                             Annuler
                           </button>
