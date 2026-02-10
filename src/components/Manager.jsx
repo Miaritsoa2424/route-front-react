@@ -14,36 +14,37 @@ export default function Manager() {
   const [expandedId, setExpandedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [messageType, setMessageType] = useState('success'); // 'success' ou 'error'
   const [editFormData, setEditFormData] = useState({});
   const [statistiques, setStatistiques] = useState([]);
   const [statistiquesMoyennes, setStatistiquesMoyennes] = useState(null);
   const [historiqueStatuts, setHistoriqueStatuts] = useState({});
 
   const fetchWithAuth = async (url, options = {}) => {
-  const token = localStorage.getItem('token');
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    // Si non autorisé, supprimer le token et rediriger vers login
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      throw new Error('Session expirée. Veuillez vous reconnecter.');
+    }
+
+    return response;
   };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  // Si non autorisé, supprimer le token et rediriger vers login
-  if (response.status === 401) {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
-    throw new Error('Session expirée. Veuillez vous reconnecter.');
-  }
-
-  return response;
-};
 
   // Charger les signalements au montage
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function Manager() {
       // Récupérer les derniers statuts avec les signalements associés
       const statutsResponse = await fetch(`${API_BASE_URL}/signalement-statuts/latest`);
       const statuts = await statutsResponse.json();
-      
+
       // Mapper les IDs de statut aux labels internes
       const statusIdMap = {
         1: 'en_attente',
@@ -65,14 +66,14 @@ export default function Manager() {
         3: 'resolu',
         4: 'rejete'
       };
-      
+
       // Récupérer l'historique complet des statuts pour tous les signalements
       const historyMap = {};
       try {
         const allStatuts = await signalementStatutService.getAllSignalementStatuts();
-        
+
         console.log('Historique des statuts récupéré:', allStatuts);
-        
+
         // Grouper par signalement
         allStatuts.forEach(statut => {
           const sigId = statut.signalement.idSignalement;
@@ -84,7 +85,7 @@ export default function Manager() {
             date: new Date(statut.dateStatut)
           });
         });
-        
+
         // Trier par date croissante
         Object.keys(historyMap).forEach(key => {
           historyMap[key].sort((a, b) => a.date - b.date);
@@ -95,7 +96,7 @@ export default function Manager() {
         console.log('Utilisation des données actuelles pour les statistiques');
       }
       setHistoriqueStatuts(historyMap);
-      
+
       // Créer la liste des signalements mappés depuis les statuts
       const mappedData = statuts.map(statut => ({
         id: statut.signalement.idSignalement,
@@ -108,44 +109,67 @@ export default function Manager() {
         localisation: `${statut.signalement.latitude}, ${statut.signalement.longitude}`,
         description: `Signalement par ${statut.signalement.user.identifiant}`
       }));
-      
+
       setSignalements(mappedData);
       setOriginalSignalements(statuts.map(statut => statut.signalement));
-      
+
       // Calculer les statistiques
       const stats = calculerStatistiques(mappedData, historyMap);
       console.log('Statistiques calculées:', stats);
       setStatistiques(stats);
-      
+
       // Calculer les statistiques moyennes
       const statsMoyennes = calculerStatistiquesMoyennes(stats);
       console.log('Statistiques moyennes:', statsMoyennes);
       setStatistiquesMoyennes(statsMoyennes);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
-      setSuccessMessage('Erreur lors du chargement des signalements');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showMessage('Erreur lors du chargement des signalements', 'error');
     } finally {
       setLoading(false);
     }
   };
-
   // Synchroniser avec l'API
   const handleSync = async () => {
     setSyncing(true);
+
     try {
-      await fetchWithAuth(`${API_BASE_URL}/signalements/sync`, {
-        method: 'POST'
-      });
+      const response = await fetchWithAuth(
+        `${API_BASE_URL}/signalements/sync`,
+        { method: 'POST' }
+      );
+
+      if (!response.ok) {
+        let errorMessage = `Erreur serveur (${response.status})`;
+
+        try {
+          const errorBody = await response.json();
+          errorMessage = errorBody.message || errorMessage;
+        } catch (e) {
+          // Si le body n'est pas du JSON
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // ✅ Succès
       await loadSignalements();
-      setSuccessMessage('Données rechargées depuis l\'API');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showMessage("✓ Données rechargées avec succès depuis l'API", 'success');
+
     } catch (error) {
-      console.error('Erreur de synchronisation:', error);
+      console.error("Erreur de synchronisation:", error);
+
+      if (error.message === "Failed to fetch") {
+        showMessage("⚠ Serveur inaccessible. Vérifiez votre connexion.", 'error');
+      } else {
+        showMessage(`✗ ${error.message}`, 'error');
+      }
+
     } finally {
       setSyncing(false);
     }
   };
+
 
   // Ouvrir l'édition d'un signalement
   const handleEditClick = (signalement) => {
@@ -164,7 +188,7 @@ export default function Manager() {
     try {
       // Trouver le signalement original pour récupérer l'utilisateur créateur
       const originalSignalement = originalSignalements.find(sig => sig.idSignalement === editingId);
-      
+
       // Mapper le statut à l'id
       const statusMap = {
         'en_attente': 1,
@@ -173,7 +197,7 @@ export default function Manager() {
         'rejete': 4
       };
       const idStatut = statusMap[editFormData.status] || 1;
-      
+
       const newSignalementStatut = {
         dateStatut: new Date().toISOString(),
         // Mbola tsy vita ny authentification
@@ -181,21 +205,19 @@ export default function Manager() {
         statutSignalement: { idStatut: idStatut },
         signalement: { idSignalement: editingId }
       };
-      
+
       // Insérer un nouveau signalement statut via l'API
       await signalementStatutService.createSignalementStatut(newSignalementStatut);
-      
+
       // Recharger les données
       await loadSignalements();
-      
+
       setEditingId(null);
       setEditFormData({});
-      setSuccessMessage('Nouveau statut créé avec succès');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showMessage('✓ Nouveau statut créé avec succès', 'success');
     } catch (error) {
       console.error('Erreur lors de la création:', error);
-      setSuccessMessage('Erreur lors de la création');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showMessage('✗ Erreur lors de la création du statut', 'error');
     }
   };
 
@@ -274,7 +296,7 @@ export default function Manager() {
   // Calculer les statistiques de jours entre les transitions
   const calculerStatistiques = (signalements, historiqueMap) => {
     console.log('Calcul statistiques avec:', { signalements: signalements.length, historiqueMap });
-    
+
     return signalements.map(sig => {
       const histoire = historiqueMap[sig.id] || [];
       let joursNouveauEncours = '-';
@@ -300,16 +322,16 @@ export default function Manager() {
           const days = Math.floor(totalSeconds / (24 * 3600));
           const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
           const minutes = Math.floor((totalSeconds % 3600) / 60);
-          
+
           if (days === 0 && hours === 0 && minutes === 0) {
             return '< 1 min';
           }
-          
+
           const parts = [];
           if (days > 0) parts.push(`${days}j`);
           if (hours > 0) parts.push(`${hours}h`);
           if (minutes > 0) parts.push(`${minutes}min`);
-          
+
           return parts.join(' ');
         };
 
@@ -362,16 +384,16 @@ export default function Manager() {
       const days = Math.floor(totalSeconds / (24 * 3600));
       const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
-      
+
       if (days === 0 && hours === 0 && minutes === 0) {
         return '< 1 min';
       }
-      
+
       const parts = [];
       if (days > 0) parts.push(`${days}j`);
       if (hours > 0) parts.push(`${hours}h`);
       if (minutes > 0) parts.push(`${minutes}min`);
-      
+
       return parts.join(' ');
     };
 
@@ -384,12 +406,12 @@ export default function Manager() {
       const somme = validNouveauEncours.reduce((acc, s) => acc + (s.joursNouveauEncours * 24 * 3600 * 1000), 0);
       moyenneNouveauEncours = somme / validNouveauEncours.length;
     }
-    
+
     if (validEncourTermine.length > 0) {
       const somme = validEncourTermine.reduce((acc, s) => acc + (s.joursEncourTermine * 24 * 3600 * 1000), 0);
       moyenneEncourTermine = somme / validEncourTermine.length;
     }
-    
+
     if (validTotaux.length > 0) {
       const somme = validTotaux.reduce((acc, s) => acc + (s.joursTotaux * 24 * 3600 * 1000), 0);
       moyenneTotaux = somme / validTotaux.length;
@@ -416,13 +438,20 @@ export default function Manager() {
     navigate('/');
   };
 
+  // Fonction utilitaire pour afficher un message
+  const showMessage = (message, type = 'success') => {
+    setSuccessMessage(message);
+    setMessageType(type);
+    setTimeout(() => setSuccessMessage(''), 5000);
+  };
+
   return (
     <div className="manager-container">
       {/* En-tête */}
       <header className="manager-header">
         <div className="header-content">
           <h1>Gestion des signalements</h1>
-          <button 
+          <button
             className="logout-button"
             onClick={handleLogout}
           >
@@ -433,7 +462,7 @@ export default function Manager() {
 
       {/* Contrôles */}
       <div className="manager-controls">
-        <button 
+        <button
           className={`sync-button ${syncing ? 'syncing' : ''}`}
           onClick={handleSync}
           disabled={syncing || loading}
@@ -441,21 +470,21 @@ export default function Manager() {
           <RefreshCw size={18} />
           {syncing ? 'Rechargement en cours...' : 'Recharger les données'}
         </button>
-        <button 
+        <button
           className="create-user-button"
           onClick={() => navigate('/manager/create-user')}
         >
           <UserPlus size={18} />
           Créer un compte
         </button>
-        <button 
+        <button
           className="users-list-button"
           onClick={() => navigate('/manager/users-list')}
         >
           <Users size={18} />
           Liste des utilisateurs
         </button>
-        <button 
+        <button
           className="unblock-users-button"
           onClick={() => navigate('/manager/unblock-users')}
         >
@@ -464,11 +493,13 @@ export default function Manager() {
         </button>
       </div>
 
-      {/* Message de succès */}
+      {/* Message de notification */}
       {successMessage && (
-        <div className="success-message">
-          <CheckCircle size={18} />
-          {successMessage}
+        <div className={`message-notification ${messageType === 'error' ? 'error' : 'success'}`}>
+          <div>
+            {messageType === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
+            <span>{successMessage}</span>
+          </div>
         </div>
       )}
 
@@ -487,7 +518,7 @@ export default function Manager() {
             {signalements.map(signalement => (
               <div key={signalement.id} className="signalement-card">
                 {/* En-tête de la carte */}
-                <div 
+                <div
                   className="signalement-header"
                   onClick={() => setExpandedId(expandedId === signalement.id ? null : signalement.id)}
                 >
@@ -583,13 +614,13 @@ export default function Manager() {
                         </div>
 
                         <div className="form-actions">
-                          <button 
+                          <button
                             className="action-button save"
                             onClick={handleSaveEdit}
                           >
                             Sauvegarder
                           </button>
-                          <button 
+                          <button
                             className="action-button cancel"
                             onClick={handleCancelEdit}
                           >
@@ -604,9 +635,9 @@ export default function Manager() {
                           <span className="label">Avancement</span>
                           <div className="progress-container">
                             <div className="progress-bar-wrapper">
-                              <div 
-                                className="progress-bar" 
-                                style={{ 
+                              <div
+                                className="progress-bar"
+                                style={{
                                   width: `${getProgressPercentage(signalement.status)}%`,
                                   background: getProgressColor(getProgressPercentage(signalement.status))
                                 }}
@@ -614,7 +645,7 @@ export default function Manager() {
                             </div>
                             <span className="progress-percentage">{getProgressPercentage(signalement.status)}%</span>
                           </div>
-                          
+
                           {/* Dates des étapes */}
                           <div className="etapes-dates">
                             {getEtapesDates(signalement.id).nouveau && (
@@ -670,7 +701,7 @@ export default function Manager() {
                         </div>
 
                         <div className="details-actions">
-                          <button 
+                          <button
                             className="action-button edit"
                             onClick={() => handleEditClick(signalement)}
                           >

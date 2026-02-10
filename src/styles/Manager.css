@@ -75,29 +75,33 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .sync-button:hover:not(:disabled) {
-  background: #2563eb;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.sync-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.sync-button.syncing {
-  opacity: 0.8;
 }
 
 .sync-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.sync-button.syncing svg {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .create-user-button {
@@ -174,13 +178,6 @@
 .unblock-users-button:active {
   transform: translateY(0);
 };
-/*
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}*/
-
-.unblock-users-button:active {
-  transform: translateY(0);
-}
 
 /* Message de succès */
 .success-message {
@@ -729,6 +726,114 @@
   display: flex;
   gap: 12px;
   margin-top: 8px;
+}
+
+/* Messages de notification améliorés */
+.message-notification {
+  max-width: 1200px;
+  margin: 16px auto 0;
+  padding: 0 24px;
+  z-index: 100;
+}
+
+.message-notification > div {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-weight: 500;
+  font-size: 14px;
+  animation: slideInSmooth 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), fadeOutSmooth 0.5s ease-in 4.5s;
+  width: 100%;
+  border: 1px solid;
+}
+
+.message-notification.success > div {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  color: #065f46;
+  border-color: #86efac;
+  border-left: 4px solid #22c55e;
+}
+
+.message-notification.success svg {
+  color: #22c55e;
+}
+
+.message-notification.error > div {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #991b1b;
+  border-color: #fca5a5;
+  border-left: 4px solid #ef4444;
+}
+
+.message-notification.error svg {
+  color: #ef4444;
+}
+
+.message-notification svg {
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.message-notification span {
+  flex: 1;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+@keyframes slideInSmooth {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.96);
+  }
+  60% {
+    transform: translateY(3px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeOutSmooth {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+}
+
+/* Amélioration du bouton de synchronisation */
+.sync-button {
+  transition: all 0.3s ease;
+}
+
+.sync-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.sync-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sync-button.syncing svg {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive */
