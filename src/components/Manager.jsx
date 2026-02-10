@@ -109,7 +109,7 @@ export default function Manager() {
       // Créer la liste des signalements mappés depuis les statuts
       const mappedData = statuts.map(statut => ({
         id: statut.signalement.idSignalement,
-        type: 'Signalement routier', // Valeur par défaut
+        type: statut.signalement.description || 'Signalement routier',
         date: new Date(statut.dateStatut).toISOString().split('T')[0],
         status: statusIdMap[statut.statutSignalement.idStatut] || 'en_attente',
         surface: statut.signalement.surface,
