@@ -266,16 +266,6 @@ export default function SignalementDetail() {
                   <p className="description-text">{signalement.description}</p>
                 </div>
               )}
-
-              <div className="action-section">
-                <button 
-                  className="maps-button"
-                  onClick={() => window.open(`https://www.google.com/maps?q=${signalement.latitude},${signalement.longitude}`, '_blank')}
-                >
-                  <ExternalLink size={20} />
-                  <span>Ouvrir dans Google Maps</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>
