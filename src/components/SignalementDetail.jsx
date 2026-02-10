@@ -33,11 +33,14 @@ export default function SignalementDetail() {
   const loadSignalementDetails = async () => {
     setLoading(true);
     try {
+      console.log('Chargement du signalement ID:', id);
       // Charger les détails du signalement
       const data = await signalementService.getSignalementById(id);
+      console.log('Données du signalement:', data);
       
       // Charger les images du signalement
       const imagesData = await imageService.getImagesBySignalement(id);
+      console.log('Données des images:', imagesData);
       
       // Transformer les images en format compatible avec le composant
       const formattedImages = imagesData.map(img => ({
@@ -48,10 +51,15 @@ export default function SignalementDetail() {
         date: img.date
       }));
       
+      console.log('Images formatées:', formattedImages);
       setImages(formattedImages);
       setSignalement(data);
+      console.log('Avant le return principal, signalement:', data, 'loading:', false);
     } catch (error) {
       console.error('Erreur lors du chargement des détails:', error);
+      // Afficher plus de détails sur l'erreur
+      console.error('Détails de l\'erreur:', error.message);
+      console.error('Stack:', error.stack);
     } finally {
       setLoading(false);
     }
@@ -140,11 +148,7 @@ export default function SignalementDetail() {
             <span>Retour à la carte</span>
           </button>
           <div className="header-title-section">
-            <h1 className="detail-title">Détails du signalement #{signalement.id}</h1>
-            <span className={`detail-status status-${getStatusClass(signalement.status)}`}>
-              {getStatusIcon(signalement.status)}
-              {getStatusLabel(signalement.status)}
-            </span>
+            <h1 className="detail-title">Détails du signalement #{signalement.idSignalement}</h1>
           </div>
         </div>
       </header>
@@ -198,82 +202,68 @@ export default function SignalementDetail() {
               <MapPin size={24} />
               <h2>Informations détaillées</h2>
             </div>
+            <div className="info-content">
+              {signalement.dateSignalement && (
+                <div className="info-item">
+                  <Calendar size={18} />
+                  <div>
+                    <span className="info-label">Date du signalement</span>
+                    <p className="info-value">{new Date(signalement.dateSignalement).toLocaleDateString('fr-FR')}</p>
+                  </div>
+                </div>
+              )}
 
-            <div className="info-cards">
-              <div className="info-card">
-                <div className="info-icon">
-                  <Calendar size={20} />
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Date de signalement</span>
-                  <span className="info-value">
-                    {new Date(signalement.date).toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </span>
-                </div>
-              </div>
-
-              <div className="info-card">
-                <div className="info-icon">
-                  <MapPin size={20} />
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Localisation</span>
-                  <span className="info-value">
-                    {signalement.lat.toFixed(6)}, {signalement.lng.toFixed(6)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="info-card">
-                <div className="info-icon">
-                  <Maximize size={20} />
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Surface affectée</span>
-                  <span className="info-value">{signalement.surface} m²</span>
-                </div>
-              </div>
-
-              <div className="info-card">
-                <div className="info-icon">
-                  <DollarSign size={20} />
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Budget estimé</span>
-                  <span className="info-value">{formatCurrency(signalement.budget)}</span>
-                </div>
-              </div>
-
-              <div className="info-card">
-                <div className="info-icon">
-                  <Building2 size={20} />
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Entreprise assignée</span>
-                  <span className="info-value">{signalement.entreprise}</span>
-                </div>
-              </div>
-            </div>
-
-            {signalement.description && (
-              <div className="description-section">
-                <h3>Description</h3>
-                <p>{signalement.description}</p>
-              </div>
-            )}
-
-            <div className="action-buttons">
-              <button 
-                className="btn-secondary"
-                onClick={() => window.open(`https://www.google.com/maps?q=${signalement.lat},${signalement.lng}`, '_blank')}
-              >
+              <div className="info-item">
                 <MapPin size={18} />
-                Voir sur Google Maps
-              </button>
+                <div>
+                  <span className="info-label">Localisation</span>
+                  <p className="info-value">{signalement.latitude}, {signalement.longitude}</p>
+                </div>
+              </div>
+
+              <div className="info-item">
+                <Maximize size={18} />
+                <div>
+                  <span className="info-label">Surface</span>
+                  <p className="info-value">{signalement.surface} m²</p>
+                </div>
+              </div>
+
+              <div className="info-item">
+                <DollarSign size={18} />
+                <div>
+                  <span className="info-label">Budget estimé</span>
+                  <p className="info-value">{formatCurrency(signalement.budget)}</p>
+                </div>
+              </div>
+
+              <div className="info-item">
+                <Building2 size={18} />
+                <div>
+                  <span className="info-label">Entreprise responsable</span>
+                  <p className="info-value">{signalement.entreprise?.nom || 'Non assignée'}</p>
+                </div>
+              </div>
+
+              {signalement.description && (
+                <div className="info-item full-width">
+                  <AlertCircle size={18} />
+                  <div>
+                    <span className="info-label">Description</span>
+                    <p className="info-value">{signalement.description}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="info-item full-width">
+                <button 
+                  className="maps-button"
+                  onClick={() => window.open(`https://www.google.com/maps?q=${signalement.latitude},${signalement.longitude}`, '_blank')}
+                >
+                  <MapPin size={18} />
+                  Voir sur Google Maps
+                </button>
+              </div>
             </div>
           </div>
         </div>
