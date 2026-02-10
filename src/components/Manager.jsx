@@ -19,6 +19,10 @@ export default function Manager() {
   const [statistiques, setStatistiques] = useState([]);
   const [statistiquesMoyennes, setStatistiquesMoyennes] = useState(null);
   const [historiqueStatuts, setHistoriqueStatuts] = useState({});
+  const [niveaux, setNiveaux] = useState({});
+  const [niveauModalOpen, setNiveauModalOpen] = useState(false);
+  const [niveauValue, setNiveauValue] = useState('');
+  const [currentNiveauSignalementId, setCurrentNiveauSignalementId] = useState(null);
 
   const fetchWithAuth = async (url, options = {}) => {
     const token = localStorage.getItem('token');
@@ -103,11 +107,12 @@ export default function Manager() {
         type: 'Signalement routier', // Valeur par défaut
         date: new Date(statut.dateStatut).toISOString().split('T')[0],
         status: statusIdMap[statut.statutSignalement.idStatut] || 'en_attente',
-        surface: statut.signalement.surface,
-        budget: statut.signalement.budget,
-        entreprise: statut.signalement.entreprise.nom,
+        //surface: statut.signalement.surface,
+        //budget: statut.signalement.budget,
+        //entreprise: statut.signalement.entreprise.nom,
         localisation: `${statut.signalement.latitude}, ${statut.signalement.longitude}`,
-        description: `Signalement par ${statut.signalement.user.identifiant}`
+        //description: `Signalement par ${statut.signalement.user.identifiant}`
+        description: statut.signalement.description || `Signalement par ${statut.signalement.user.identifiant}`
       }));
 
       setSignalements(mappedData);
@@ -438,6 +443,27 @@ export default function Manager() {
     navigate('/');
   };
 
+  // Ouvrir modal de détermination de niveau
+  const openNiveauModal = (signalementId) => {
+    setCurrentNiveauSignalementId(signalementId);
+    setNiveauValue(niveaux[signalementId] != null ? String(niveaux[signalementId]) : '');
+    setNiveauModalOpen(true);
+  };
+
+  const closeNiveauModal = () => {
+    setCurrentNiveauSignalementId(null);
+    setNiveauValue('');
+    setNiveauModalOpen(false);
+  };
+
+  const saveNiveau = () => {
+    if (currentNiveauSignalementId == null) return;
+    const numeric = niveauValue === '' ? null : Number(niveauValue);
+    setNiveaux(prev => ({ ...prev, [currentNiveauSignalementId]: numeric }));
+    closeNiveauModal();
+    showMessage('✓ Niveau enregistré avec succès', 'success');
+  };
+
   // Fonction utilitaire pour afficher un message
   const showMessage = (message, type = 'success') => {
     setSuccessMessage(message);
@@ -678,15 +704,22 @@ export default function Manager() {
                         <div className="detail-row">
                           <div className="detail-item">
                             <span className="label">Surface</span>
-                            <span className="value">{signalement.surface} m²</span>
+                              <span className="value">{signalement.surface != null ? `${signalement.surface} m²` : 'A définir'}</span>
                           </div>
                           <div className="detail-item">
                             <span className="label">Budget</span>
-                            <span className="value">{signalement.budget.toLocaleString('fr-FR')} Ar</span>
+                              <span className="value">{signalement.budget != null ? `${signalement.budget.toLocaleString('fr-FR')} Ar` : 'A définir'}</span>
                           </div>
                           <div className="detail-item">
                             <span className="label">Entreprise</span>
-                            <span className="value">{signalement.entreprise}</span>
+                              <span className="value">{signalement.entreprise ? signalement.entreprise : 'A définir'}</span>
+                          </div>
+                        </div>
+
+                        <div className="detail-row">
+                          <div className="detail-item">
+                            <span className="label">Niveau</span>
+                            <span className="value">{niveaux[signalement.id] != null ? niveaux[signalement.id] : 'A définir'}</span>
                           </div>
                         </div>
 
@@ -707,6 +740,21 @@ export default function Manager() {
                           >
                             Modifier
                           </button>
+                          {niveaux[signalement.id] == null && (
+                            <button
+                              className="action-button level"
+                              onClick={() => openNiveauModal(signalement.id)}
+                              style={{
+                                background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+                                color: '#fff',
+                                border: 'none',
+                                fontWeight: '600',
+                                boxShadow: '0 2px 8px rgba(108, 117, 125, 0.3)'
+                              }}
+                            >
+                              Déterminer le niveau
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -775,6 +823,115 @@ export default function Manager() {
                 <div className="moyenne-label">Nouveau → Terminé</div>
                 <div className="moyenne-value">{statistiquesMoyennes.nouveauTermine.jours} jours</div>
                 <div className="moyenne-detail">{statistiquesMoyennes.nouveauTermine.detail}</div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal pour déterminer le niveau */}
+        {niveauModalOpen && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'rgba(0,0,0,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              backdropFilter: 'blur(3px)'
+            }}
+            onClick={closeNiveauModal}
+          >
+            <div
+              className="modal"
+              style={{
+                background: 'linear-gradient(to bottom, #fff 0%, #f8f9fa 100%)',
+                padding: '24px',
+                borderRadius: '12px',
+                width: '90%',
+                maxWidth: '420px',
+                boxShadow: '0 8px 32px rgba(108, 117, 125, 0.3)',
+                zIndex: 10000,
+                border: '3px solid #6c757d'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{
+                color: '#495057',
+                marginTop: 0,
+                marginBottom: '20px',
+                fontSize: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>Déterminer le niveau</h3>
+              <div className="modal-body">
+                
+                <input
+                  type="number"
+                  value={niveauValue}
+                  onChange={(e) => setNiveauValue(e.target.value)}
+                  placeholder="Saisir un niveau (1 jusqu'à 10)"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    marginTop: '6px',
+                    boxSizing: 'border-box',
+                    border: '2px solid #adb5bd',
+                    borderRadius: '6px',
+                    fontSize: '16px',
+                    outline: 'none',
+                    transition: 'border-color 0.3s',
+                    background: '#fff',
+                    color: '#000'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#6c757d'}
+                  onBlur={(e) => e.target.style.borderColor = '#adb5bd'}
+                />
+              </div>
+              <div className="modal-actions" style={{
+                marginTop: '20px',
+                display: 'flex',
+                gap: '10px',
+                justifyContent: 'flex-end'
+              }}>
+                <button
+                  className="action-button save"
+                  onClick={saveNiveau}
+                  style={{
+                    background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 3px 10px rgba(108, 117, 125, 0.4)',
+                    transition: 'transform 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}>
+Enregistrer le niveau</button>
+                <button
+                  className="action-button cancel"
+                  onClick={closeNiveauModal}
+                  style={{
+                    background: '#f5f5f5',
+                    color: '#666',
+                    border: '1px solid #ddd',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
+                  onMouseLeave={(e) => e.target.style.background = '#f5f5f5'}
+                >❌ Annuler</button>
               </div>
             </div>
           </div>
