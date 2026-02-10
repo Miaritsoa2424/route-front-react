@@ -175,7 +175,7 @@ export const signalementStatutService = {
 // Stats
 export const statsService = {
   getStats: async () => {
-    const response = await fetchWithoutAuth(`${API_BASE_URL}/stats`);
+    const response = await fetch(`${API_BASE_URL}/stats`);
     return response.json();
   },
 };
