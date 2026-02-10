@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import VisitorMap from './components/VisitorMap';
+import SignalementDetail from './components/SignalementDetail';
 import Login from './components/Login';
 import Manager from './components/Manager';
 import UnblockUsers from './components/UnblockUsers';
@@ -13,6 +14,9 @@ function App() {
       <Routes>
         {/* Page d'accueil - Vue Visiteur */}
         <Route path="/" element={<VisitorMap />} />
+        
+        {/* Page de détails d'un signalement */}
+        <Route path="/signalement/:id" element={<SignalementDetail />} />
         
         {/* Page de connexion */}
         <Route path="/login" element={<Login />} />

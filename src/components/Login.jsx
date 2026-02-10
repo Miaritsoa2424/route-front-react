@@ -5,15 +5,15 @@ import '../styles/Login.css';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('rakoto@gmail.mg');
+  const [password, setPassword] = useState('admin');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     // Validation basique
     if (!email.trim() || !password.trim()) {
       setError('Veuillez remplir tous les champs');
@@ -31,23 +31,23 @@ export default function Login() {
     //}
 
     setLoading(true);
-    
+
     try {
       const user = await authService.login(email, password);
-      
-      if (user && user.profil && user.profil.idProfil === 1) {
+
+      if (user.user && user.user.profil && user.user.profil.idProfil === 1) {
         // Stocker le token si fourni
-        if (user.token) {
-          localStorage.setItem('token', user.token);
+        if (user.user.token) {
+          localStorage.setItem('token', user.user.token);
         }
         console.log('Connexion réussie en tant qu\'admin');
         navigate('/manager');
       } else {
-        console.log(user); 
+        console.log(user.user);
         setError('Accès refusé. Vous devez être administrateur.');
       }
     } catch (err) {
-      setError('Erreur de connexion. Veuillez vérifier vos identifiants.');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -96,8 +96,8 @@ export default function Login() {
             <a href="#" className="forgot-password">Mot de passe oublié ?</a>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className={`login-button ${loading ? 'loading' : ''}`}
             disabled={loading}
           >

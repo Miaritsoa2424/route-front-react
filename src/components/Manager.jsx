@@ -4,6 +4,7 @@ import { RefreshCw, UserPlus, Users, Unlock, CheckCircle, AlertCircle } from 'lu
 import { signalementService, signalementStatutService, API_BASE_URL } from '../services/api';
 import '../styles/Manager.css';
 
+
 export default function Manager() {
   const navigate = useNavigate();
   const [signalements, setSignalements] = useState([]);
@@ -13,7 +14,37 @@ export default function Manager() {
   const [expandedId, setExpandedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [messageType, setMessageType] = useState('success'); // 'success' ou 'error'
   const [editFormData, setEditFormData] = useState({});
+  const [statistiques, setStatistiques] = useState([]);
+  const [statistiquesMoyennes, setStatistiquesMoyennes] = useState(null);
+  const [historiqueStatuts, setHistoriqueStatuts] = useState({});
+
+  const fetchWithAuth = async (url, options = {}) => {
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    // Si non autorisé, supprimer le token et rediriger vers login
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      throw new Error('Session expirée. Veuillez vous reconnecter.');
+    }
+
+    return response;
+  };
 
   // Charger les signalements au montage
   useEffect(() => {
@@ -27,7 +58,7 @@ export default function Manager() {
       // Récupérer les derniers statuts avec les signalements associés
       const statutsResponse = await fetch(`${API_BASE_URL}/signalement-statuts/latest`);
       const statuts = await statutsResponse.json();
-      
+
       // Mapper les IDs de statut aux labels internes
       const statusIdMap = {
         1: 'en_attente',
@@ -35,12 +66,42 @@ export default function Manager() {
         3: 'resolu',
         4: 'rejete'
       };
-      
+
+      // Récupérer l'historique complet des statuts pour tous les signalements
+      const historyMap = {};
+      try {
+        const allStatuts = await signalementStatutService.getAllSignalementStatuts();
+
+        console.log('Historique des statuts récupéré:', allStatuts);
+
+        // Grouper par signalement
+        allStatuts.forEach(statut => {
+          const sigId = statut.signalement.idSignalement;
+          if (!historyMap[sigId]) {
+            historyMap[sigId] = [];
+          }
+          historyMap[sigId].push({
+            statut: statusIdMap[statut.statutSignalement.idStatut],
+            date: new Date(statut.dateStatut)
+          });
+        });
+
+        // Trier par date croissante
+        Object.keys(historyMap).forEach(key => {
+          historyMap[key].sort((a, b) => a.date - b.date);
+        });
+        console.log('Historique mappé par signalement:', historyMap);
+      } catch (error) {
+        console.warn('Impossible de récupérer l\'historique complet des statuts:', error);
+        console.log('Utilisation des données actuelles pour les statistiques');
+      }
+      setHistoriqueStatuts(historyMap);
+
       // Créer la liste des signalements mappés depuis les statuts
       const mappedData = statuts.map(statut => ({
         id: statut.signalement.idSignalement,
         type: 'Signalement routier', // Valeur par défaut
-        date: new Date().toISOString().split('T')[0], // Date actuelle par défaut
+        date: new Date(statut.dateStatut).toISOString().split('T')[0],
         status: statusIdMap[statut.statutSignalement.idStatut] || 'en_attente',
         surface: statut.signalement.surface,
         budget: statut.signalement.budget,
@@ -48,34 +109,67 @@ export default function Manager() {
         localisation: `${statut.signalement.latitude}, ${statut.signalement.longitude}`,
         description: `Signalement par ${statut.signalement.user.identifiant}`
       }));
-      
+
       setSignalements(mappedData);
       setOriginalSignalements(statuts.map(statut => statut.signalement));
+
+      // Calculer les statistiques
+      const stats = calculerStatistiques(mappedData, historyMap);
+      console.log('Statistiques calculées:', stats);
+      setStatistiques(stats);
+
+      // Calculer les statistiques moyennes
+      const statsMoyennes = calculerStatistiquesMoyennes(stats);
+      console.log('Statistiques moyennes:', statsMoyennes);
+      setStatistiquesMoyennes(statsMoyennes);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
-      setSuccessMessage('Erreur lors du chargement des signalements');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showMessage('Erreur lors du chargement des signalements', 'error');
     } finally {
       setLoading(false);
     }
   };
-
   // Synchroniser avec l'API
   const handleSync = async () => {
     setSyncing(true);
+
     try {
-      await fetch(`${API_BASE_URL}/signalements/sync`, {
-        method: 'POST'
-      });
+      const response = await fetchWithAuth(
+        `${API_BASE_URL}/signalements/sync`,
+        { method: 'POST' }
+      );
+
+      if (!response.ok) {
+        let errorMessage = `Erreur serveur (${response.status})`;
+
+        try {
+          const errorBody = await response.json();
+          errorMessage = errorBody.message || errorMessage;
+        } catch (e) {
+          // Si le body n'est pas du JSON
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // ✅ Succès
       await loadSignalements();
-      setSuccessMessage('Données rechargées depuis l\'API');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showMessage("✓ Données rechargées avec succès depuis l'API", 'success');
+
     } catch (error) {
-      console.error('Erreur de synchronisation:', error);
+      console.error("Erreur de synchronisation:", error);
+
+      if (error.message === "Failed to fetch") {
+        showMessage("⚠ Serveur inaccessible. Vérifiez votre connexion.", 'error');
+      } else {
+        showMessage(`✗ ${error.message}`, 'error');
+      }
+
     } finally {
       setSyncing(false);
     }
   };
+
 
   // Ouvrir l'édition d'un signalement
   const handleEditClick = (signalement) => {
@@ -92,6 +186,9 @@ export default function Manager() {
   // Sauvegarder les modifications (insère un nouveau signalement statut)
   const handleSaveEdit = async () => {
     try {
+      // Trouver le signalement original pour récupérer l'utilisateur créateur
+      const originalSignalement = originalSignalements.find(sig => sig.idSignalement === editingId);
+
       // Mapper le statut à l'id
       const statusMap = {
         'en_attente': 1,
@@ -100,29 +197,27 @@ export default function Manager() {
         'rejete': 4
       };
       const idStatut = statusMap[editFormData.status] || 1;
-      
+
       const newSignalementStatut = {
         dateStatut: new Date().toISOString(),
         // Mbola tsy vita ny authentification
-        user: { idUser: 1 }, // Utilisateur connecté, à adapter
+        user: { idUser: originalSignalement.user.idUser }, // Utilisateur qui a créé le signalement
         statutSignalement: { idStatut: idStatut },
         signalement: { idSignalement: editingId }
       };
-      
+
       // Insérer un nouveau signalement statut via l'API
       await signalementStatutService.createSignalementStatut(newSignalementStatut);
-      
+
       // Recharger les données
       await loadSignalements();
-      
+
       setEditingId(null);
       setEditFormData({});
-      setSuccessMessage('Nouveau statut créé avec succès');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showMessage('✓ Nouveau statut créé avec succès', 'success');
     } catch (error) {
       console.error('Erreur lors de la création:', error);
-      setSuccessMessage('Erreur lors de la création');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showMessage('✗ Erreur lors de la création du statut', 'error');
     }
   };
 
@@ -145,17 +240,209 @@ export default function Manager() {
   // Obtenir le label du statut
   const getStatusLabel = (status) => {
     const labelMap = {
-      'en_attente': 'En attente',
+      'en_attente': 'Nouveau',
       'en_cours': 'En cours',
-      'resolu': 'Résolu',
+      'resolu': 'Terminé',
       'rejete': 'Rejeté'
     };
     return labelMap[status] || status;
   };
 
+  // Obtenir le pourcentage d'avancement basé sur le statut
+  const getProgressPercentage = (status) => {
+    const progressMap = {
+      'en_attente': 0,
+      'en_cours': 50,
+      'resolu': 100,
+      'rejete': 0
+    };
+    return progressMap[status] || 0;
+  };
+
+  // Obtenir la couleur de la barre de progression basée sur le pourcentage
+  const getProgressColor = (percentage) => {
+    if (percentage === 100) {
+      return '#22c55e'; // Vert
+    } else if (percentage === 50) {
+      return '#eab308'; // Jaune
+    } else {
+      return '#3b82f6'; // Bleu (par défaut)
+    }
+  };
+
+  // Formater une date au format français
+  const formatDate = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Obtenir les dates de chaque étape pour un signalement
+  const getEtapesDates = (signalementId) => {
+    const histoire = historiqueStatuts[signalementId] || [];
+    return {
+      nouveau: histoire.find(h => h.statut === 'en_attente')?.date,
+      encours: histoire.find(h => h.statut === 'en_cours')?.date,
+      resolu: histoire.find(h => h.statut === 'resolu')?.date,
+      rejete: histoire.find(h => h.statut === 'rejete')?.date
+    };
+  };
+
+  // Calculer les statistiques de jours entre les transitions
+  const calculerStatistiques = (signalements, historiqueMap) => {
+    console.log('Calcul statistiques avec:', { signalements: signalements.length, historiqueMap });
+
+    return signalements.map(sig => {
+      const histoire = historiqueMap[sig.id] || [];
+      let joursNouveauEncours = '-';
+      let joursEncourTermine = '-';
+      let joursTotaux = '-';
+      let detailNouveauEncours = '';
+      let detailEncourTermine = '';
+      let detailTotaux = '';
+
+      console.log(`Statistiques pour ${sig.id}:`, histoire);
+
+      if (histoire.length >= 1) {
+        // Chercher les dates de transition
+        const dateNouveau = histoire.find(h => h.statut === 'en_attente')?.date;
+        const dateEncours = histoire.find(h => h.statut === 'en_cours')?.date;
+        const dateTermine = histoire.find(h => h.statut === 'resolu')?.date;
+
+        console.log(`  Dates pour ${sig.id}:`, { dateNouveau, dateEncours, dateTermine });
+
+        // Fonction utilitaire pour formater la durée
+        const formatDuration = (ms) => {
+          const totalSeconds = Math.floor(ms / 1000);
+          const days = Math.floor(totalSeconds / (24 * 3600));
+          const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+          if (days === 0 && hours === 0 && minutes === 0) {
+            return '< 1 min';
+          }
+
+          const parts = [];
+          if (days > 0) parts.push(`${days}j`);
+          if (hours > 0) parts.push(`${hours}h`);
+          if (minutes > 0) parts.push(`${minutes}min`);
+
+          return parts.join(' ');
+        };
+
+        // Calculer les différences
+        if (dateNouveau && dateEncours) {
+          const diffMs = dateEncours - dateNouveau;
+          joursNouveauEncours = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailNouveauEncours = formatDuration(diffMs);
+        }
+        if (dateEncours && dateTermine) {
+          const diffMs = dateTermine - dateEncours;
+          joursEncourTermine = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailEncourTermine = formatDuration(diffMs);
+        }
+        if (dateNouveau && dateTermine) {
+          const diffMs = dateTermine - dateNouveau;
+          joursTotaux = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailTotaux = formatDuration(diffMs);
+        } else if (dateNouveau) {
+          // Si pas encore terminé, calculer jusqu'à maintenant
+          const diffMs = new Date() - dateNouveau;
+          joursTotaux = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          detailTotaux = formatDuration(diffMs);
+        }
+      }
+
+      return {
+        id: sig.id,
+        type: sig.type,
+        joursNouveauEncours,
+        joursEncourTermine,
+        joursTotaux,
+        detailNouveauEncours,
+        detailEncourTermine,
+        detailTotaux
+      };
+    });
+  };
+
+  // Calculer les statistiques moyennes globales
+  const calculerStatistiquesMoyennes = (stats) => {
+    // Filtrer les valeurs valides (non "-")
+    const validNouveauEncours = stats.filter(s => s.joursNouveauEncours !== '-');
+    const validEncourTermine = stats.filter(s => s.joursEncourTermine !== '-');
+    const validTotaux = stats.filter(s => s.joursTotaux !== '-');
+
+    const formatDuration = (ms) => {
+      if (!ms || ms === 0) return '-';
+      const totalSeconds = Math.floor(ms / 1000);
+      const days = Math.floor(totalSeconds / (24 * 3600));
+      const hours = Math.floor((totalSeconds % (24 * 3600)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+      if (days === 0 && hours === 0 && minutes === 0) {
+        return '< 1 min';
+      }
+
+      const parts = [];
+      if (days > 0) parts.push(`${days}j`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}min`);
+
+      return parts.join(' ');
+    };
+
+    // Calculer les moyennes en millisecondes
+    let moyenneNouveauEncours = 0;
+    let moyenneEncourTermine = 0;
+    let moyenneTotaux = 0;
+
+    if (validNouveauEncours.length > 0) {
+      const somme = validNouveauEncours.reduce((acc, s) => acc + (s.joursNouveauEncours * 24 * 3600 * 1000), 0);
+      moyenneNouveauEncours = somme / validNouveauEncours.length;
+    }
+
+    if (validEncourTermine.length > 0) {
+      const somme = validEncourTermine.reduce((acc, s) => acc + (s.joursEncourTermine * 24 * 3600 * 1000), 0);
+      moyenneEncourTermine = somme / validEncourTermine.length;
+    }
+
+    if (validTotaux.length > 0) {
+      const somme = validTotaux.reduce((acc, s) => acc + (s.joursTotaux * 24 * 3600 * 1000), 0);
+      moyenneTotaux = somme / validTotaux.length;
+    }
+
+    return {
+      nouveauEncours: {
+        jours: Math.floor(moyenneNouveauEncours / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneNouveauEncours)
+      },
+      encourTermine: {
+        jours: Math.floor(moyenneEncourTermine / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneEncourTermine)
+      },
+      nouveauTermine: {
+        jours: Math.floor(moyenneTotaux / (24 * 3600 * 1000)),
+        detail: formatDuration(moyenneTotaux)
+      }
+    };
+  };
+
   const handleLogout = () => {
     // À remplacer par votre logique de déconnexion
     navigate('/');
+  };
+
+  // Fonction utilitaire pour afficher un message
+  const showMessage = (message, type = 'success') => {
+    setSuccessMessage(message);
+    setMessageType(type);
+    setTimeout(() => setSuccessMessage(''), 5000);
   };
 
   return (
@@ -164,7 +451,7 @@ export default function Manager() {
       <header className="manager-header">
         <div className="header-content">
           <h1>Gestion des signalements</h1>
-          <button 
+          <button
             className="logout-button"
             onClick={handleLogout}
           >
@@ -175,7 +462,7 @@ export default function Manager() {
 
       {/* Contrôles */}
       <div className="manager-controls">
-        <button 
+        <button
           className={`sync-button ${syncing ? 'syncing' : ''}`}
           onClick={handleSync}
           disabled={syncing || loading}
@@ -183,21 +470,21 @@ export default function Manager() {
           <RefreshCw size={18} />
           {syncing ? 'Rechargement en cours...' : 'Recharger les données'}
         </button>
-        <button 
+        <button
           className="create-user-button"
           onClick={() => navigate('/manager/create-user')}
         >
           <UserPlus size={18} />
           Créer un compte
         </button>
-        <button 
+        <button
           className="users-list-button"
           onClick={() => navigate('/manager/users-list')}
         >
           <Users size={18} />
           Liste des utilisateurs
         </button>
-        <button 
+        <button
           className="unblock-users-button"
           onClick={() => navigate('/manager/unblock-users')}
         >
@@ -206,11 +493,13 @@ export default function Manager() {
         </button>
       </div>
 
-      {/* Message de succès */}
+      {/* Message de notification */}
       {successMessage && (
-        <div className="success-message">
-          <CheckCircle size={18} />
-          {successMessage}
+        <div className={`message-notification ${messageType === 'error' ? 'error' : 'success'}`}>
+          <div>
+            {messageType === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
+            <span>{successMessage}</span>
+          </div>
         </div>
       )}
 
@@ -229,7 +518,7 @@ export default function Manager() {
             {signalements.map(signalement => (
               <div key={signalement.id} className="signalement-card">
                 {/* En-tête de la carte */}
-                <div 
+                <div
                   className="signalement-header"
                   onClick={() => setExpandedId(expandedId === signalement.id ? null : signalement.id)}
                 >
@@ -324,13 +613,13 @@ export default function Manager() {
                         </div>
 
                         <div className="form-actions">
-                          <button 
+                          <button
                             className="action-button save"
                             onClick={handleSaveEdit}
                           >
                             Sauvegarder
                           </button>
-                          <button 
+                          <button
                             className="action-button cancel"
                             onClick={handleCancelEdit}
                           >
@@ -341,6 +630,50 @@ export default function Manager() {
                     ) : (
                       // Affichage des détails
                       <div className="details-display">
+                        <div className="detail-full progress-section">
+                          <span className="label">Avancement</span>
+                          <div className="progress-container">
+                            <div className="progress-bar-wrapper">
+                              <div
+                                className="progress-bar"
+                                style={{
+                                  width: `${getProgressPercentage(signalement.status)}%`,
+                                  background: getProgressColor(getProgressPercentage(signalement.status))
+                                }}
+                              ></div>
+                            </div>
+                            <span className="progress-percentage">{getProgressPercentage(signalement.status)}%</span>
+                          </div>
+
+                          {/* Dates des étapes */}
+                          <div className="etapes-dates">
+                            {getEtapesDates(signalement.id).nouveau && (
+                              <div className="etape-date">
+                                <span className="etape-label">Nouveau</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).nouveau)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).encours && (
+                              <div className="etape-date">
+                                <span className="etape-label">En cours</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).encours)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).resolu && (
+                              <div className="etape-date">
+                                <span className="etape-label">Résolu</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).resolu)}</span>
+                              </div>
+                            )}
+                            {getEtapesDates(signalement.id).rejete && (
+                              <div className="etape-date">
+                                <span className="etape-label">Rejeté</span>
+                                <span className="etape-datetime">{formatDate(getEtapesDates(signalement.id).rejete)}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="detail-row">
                           <div className="detail-item">
                             <span className="label">Surface</span>
@@ -367,7 +700,7 @@ export default function Manager() {
                         </div>
 
                         <div className="details-actions">
-                          <button 
+                          <button
                             className="action-button edit"
                             onClick={() => handleEditClick(signalement)}
                           >
@@ -380,6 +713,69 @@ export default function Manager() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Tableau de statistiques */}
+        {signalements.length > 0 && (
+          <div className="statistics-section">
+            <h2>Données réelles de traitement</h2>
+            {statistiques.length > 0 ? (
+              <div className="statistics-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Type de signalement</th>
+                      <th>Jours (Nouveau → En cours)</th>
+                      <th>Jours (En cours → Terminé)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statistiques.map(stat => (
+                      <tr key={stat.id}>
+                        <td>{stat.type}</td>
+                        <td className="center">
+                          <div className="duration-value">{stat.joursNouveauEncours}</div>
+                          <div className="duration-detail">{stat.detailNouveauEncours}</div>
+                        </td>
+                        <td className="center">
+                          <div className="duration-value">{stat.joursEncourTermine}</div>
+                          <div className="duration-detail">{stat.detailEncourTermine}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="statistics-placeholder">
+                <p>Données de statistiques indisponibles. Vérifiez la console pour plus de détails.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Statistiques moyennes */}
+        {statistiquesMoyennes && (
+          <div className="statistics-section moyennes-section">
+            <h2>Statistiques moyennes</h2>
+            <div className="moyennes-grid">
+              <div className="moyenne-card">
+                <div className="moyenne-label">Nouveau → En cours</div>
+                <div className="moyenne-value">{statistiquesMoyennes.nouveauEncours.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.nouveauEncours.detail}</div>
+              </div>
+              <div className="moyenne-card">
+                <div className="moyenne-label">En cours → Terminé</div>
+                <div className="moyenne-value">{statistiquesMoyennes.encourTermine.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.encourTermine.detail}</div>
+              </div>
+              <div className="moyenne-card highlight">
+                <div className="moyenne-label">Nouveau → Terminé</div>
+                <div className="moyenne-value">{statistiquesMoyennes.nouveauTermine.jours} jours</div>
+                <div className="moyenne-detail">{statistiquesMoyennes.nouveauTermine.detail}</div>
+              </div>
+            </div>
           </div>
         )}
       </div>
