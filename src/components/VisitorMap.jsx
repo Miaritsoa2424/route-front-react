@@ -153,7 +153,12 @@ export default function VisitorMap() {
   };
 
   const formatCurrency = (amount) => {
-    return `${(amount / 1000000).toFixed(1)}M Ar`;
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'MGA',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
   // Fonction pour gérer l'erreur de chargement des tuiles
