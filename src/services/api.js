@@ -211,6 +211,14 @@ export const entrepriseService = {
   deleteEntreprise: async (id) => {
     await fetchWithAuth(`${API_BASE_URL}/entreprises/${id}`, { method: 'DELETE' });
   },
+
+  createPrix: async (entrepriseId, prixData) => {
+    const response = await fetchWithAuth(`${API_BASE_URL}/entreprises/${entrepriseId}/prix`, {
+      method: 'POST',
+      body: JSON.stringify(prixData),
+    });
+    return response.json();
+  },
 };
 
 // Tentatives
