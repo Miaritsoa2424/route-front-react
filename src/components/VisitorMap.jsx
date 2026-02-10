@@ -470,11 +470,11 @@ export default function VisitorMap() {
                           </div>
                           <div className="popup-row">
                             <span className="popup-label">Surface affectée</span>
-                            <span className="popup-value">{problem.surface} m²</span>
+                            <span className="popup-value">{problem.surface != null ? `${problem.surface} m²` : 'Non définie'}</span>
                           </div>
                           <div className="popup-row">
                             <span className="popup-label">Budget estimé</span>
-                            <span className="popup-value">{formatCurrency(problem.budget)}</span>
+                            <span className="popup-value">{problem.budget != null ? formatCurrency(problem.budget) : 'Non défini'}</span>
                           </div>
                           <div className="popup-row">
                             <span className="popup-label">Entreprise</span>

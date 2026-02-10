@@ -233,7 +233,7 @@ export default function SignalementDetail() {
                 </div>
                 <div className="info-card-content">
                   <span className="info-label">Surface affectée</span>
-                  <p className="info-value">{signalement.surface} m²</p>
+                  <p className="info-value">{signalement.surface != null ? `${signalement.surface} m²` : 'Non définie'}</p>
                 </div>
               </div>
 
@@ -243,7 +243,7 @@ export default function SignalementDetail() {
                 </div>
                 <div className="info-card-content">
                   <span className="info-label">Budget estimé</span>
-                  <p className="info-value">{formatCurrency(signalement.budget)}</p>
+                  <p className="info-value">{signalement.budget != null ? formatCurrency(signalement.budget) : 'Non défini'}</p>
                 </div>
               </div>
 
