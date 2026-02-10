@@ -269,16 +269,6 @@ export default function VisitorMap() {
           
           <div className="navbar-actions">
             <button 
-              className="refresh-button"
-              onClick={handleSync}
-              disabled={syncing}
-              title="Actualiser les données"
-            >
-              <RefreshCw size={18} className={syncing ? 'spinning' : ''} />
-              <span>{syncing ? 'Actualisation...' : 'Actualiser'}</span>
-            </button>
-            
-            <button 
               className="login-nav-button"
               onClick={() => navigate('/login')}
             >
