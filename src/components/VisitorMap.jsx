@@ -64,18 +64,17 @@ export default function VisitorMap() {
       const signalements = await signalementService.getAllSignalements();
       console.log('Signalements récupérés:', signalements);
       
-      // Mapper les signalements au format des problèmes
+      // Mapper les signalements PostgreSQL au format des problèmes
       const mappedProblems = signalements.map(signalement => ({
-        id: signalement.idSignalement || signalement.id,  // Utiliser idSignalement PostgreSQL pour la navigation
-        firestoreId: signalement.id,  // Garder l'ID Firestore si nécessaire
-        lat: signalement.latitude || signalement.localisation?.latitude,
-        lng: signalement.longitude || signalement.localisation?.longitude,
+        id: signalement.idSignalement,  // ID PostgreSQL pour la navigation
+        lat: signalement.latitude,
+        lng: signalement.longitude,
         type: 'Signalement routier',
-        date: new Date().toISOString().split('T')[0],
-        status: signalement.dernierStatut || 'nouveau',
+        date: signalement.dateSignalement || new Date().toISOString().split('T')[0],
+        status: 'nouveau',  // Statut par défaut (peut être amélioré avec les statuts)
         surface: signalement.surface,
         budget: signalement.budget,
-        entreprise: signalement.entreprise || 'N/A'
+        entreprise: signalement.entreprise?.nom || 'N/A'
       }));
       
       console.log('Problèmes mappés:', mappedProblems);

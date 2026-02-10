@@ -6,7 +6,7 @@ import '../styles/Login.css';
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('rakoto@gmail.mg');
-  const [password, setPassword] = useState('admin');
+  const [password, setPassword] = useState('adminadmin');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
