@@ -19,7 +19,6 @@ export default function Manager() {
   const [statistiques, setStatistiques] = useState([]);
   const [statistiquesMoyennes, setStatistiquesMoyennes] = useState(null);
   const [historiqueStatuts, setHistoriqueStatuts] = useState({});
-  const [niveaux, setNiveaux] = useState({});
   const [niveauModalOpen, setNiveauModalOpen] = useState(false);
   const [niveauValue, setNiveauValue] = useState('');
   const [currentNiveauSignalementId, setCurrentNiveauSignalementId] = useState(null);
@@ -112,9 +111,10 @@ export default function Manager() {
         type: 'Signalement routier', // Valeur par défaut
         date: new Date(statut.dateStatut).toISOString().split('T')[0],
         status: statusIdMap[statut.statutSignalement.idStatut] || 'en_attente',
-        //surface: statut.signalement.surface,
-        //budget: statut.signalement.budget,
-        //entreprise: statut.signalement.entreprise.nom,
+        surface: statut.signalement.surface,
+        budget: statut.signalement.budget,
+        entreprise: statut.signalement.entreprise ? statut.signalement.entreprise.nom : null,
+        niveau: statut.signalement.niveau,
         localisation: `${statut.signalement.latitude}, ${statut.signalement.longitude}`,
         //description: `Signalement par ${statut.signalement.user.identifiant}`
         description: statut.signalement.description || `Signalement par ${statut.signalement.user.identifiant}`
@@ -451,7 +451,8 @@ export default function Manager() {
   // Ouvrir modal de détermination de niveau
   const openNiveauModal = (signalementId) => {
     setCurrentNiveauSignalementId(signalementId);
-    setNiveauValue(niveaux[signalementId] != null ? String(niveaux[signalementId]) : '');
+    const sig = signalements.find(s => s.id === signalementId);
+    setNiveauValue(sig && sig.niveau != null ? String(sig.niveau) : '');
     setNiveauModalOpen(true);
   };
 
@@ -461,12 +462,27 @@ export default function Manager() {
     setNiveauModalOpen(false);
   };
 
-  const saveNiveau = () => {
+  const saveNiveau = async () => {
     if (currentNiveauSignalementId == null) return;
     const numeric = niveauValue === '' ? null : Number(niveauValue);
-    setNiveaux(prev => ({ ...prev, [currentNiveauSignalementId]: numeric }));
-    closeNiveauModal();
-    showMessage('✓ Niveau enregistré avec succès', 'success');
+    if (numeric == null) {
+      showMessage('Veuillez saisir un niveau', 'error');
+      return;
+    }
+    try {
+      const response = await fetchWithAuth(`${API_BASE_URL}/signalements/${currentNiveauSignalementId}/niveau/${numeric}`, {
+        method: 'PUT',
+      });
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'enregistrement du niveau');
+      }
+      setSignalements(prev => prev.map(s => s.id === currentNiveauSignalementId ? { ...s, niveau: numeric } : s));
+      closeNiveauModal();
+      showMessage('✓ Niveau enregistré avec succès', 'success');
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du niveau:', error);
+      showMessage('Erreur lors de l\'enregistrement du niveau', 'error');
+    }
   };
 
   // Assigner un signalement à une entreprise
@@ -491,23 +507,52 @@ export default function Manager() {
     setAssignModalOpen(false);
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (assignSignalementId == null) return;
     const surfaceVal = assignSurface === '' ? null : Number(assignSurface);
     const entrepriseObj = entreprises.find(e => String(e.idEntreprise) === String(selectedEntrepriseId));
     const entrepriseName = entrepriseObj ? entrepriseObj.nom : null;
+    const prixParM2 = entrepriseObj && entrepriseObj.dernierPrix != null ? Number(entrepriseObj.dernierPrix) : null;
+    const sigObj = signalements.find(s => s.id === assignSignalementId);
+    const niveau = sigObj && sigObj.niveau != null ? Number(sigObj.niveau) : null;
 
-    setSignalements(prev => prev.map(s => s.id === assignSignalementId ? {
-      ...s,
-      surface: surfaceVal,
-      entreprise: entrepriseName
-    } : s));
+    // Calcul du budget = niveau * prix par m² * surface
+    let budgetVal = null;
+    if (niveau != null && prixParM2 != null && surfaceVal != null) {
+      budgetVal = niveau * prixParM2 * surfaceVal;
+    }
 
-    // Also update originalSignalements if matching idSignalement exists
-    setOriginalSignalements(prev => prev.map(o => (o.idSignalement === assignSignalementId ? { ...o, surface: surfaceVal, entreprise: entrepriseName } : o)));
+    if (!selectedEntrepriseId) {
+      showMessage('Veuillez sélectionner une entreprise', 'error');
+      return;
+    }
 
-    closeAssignModal();
-    showMessage('✓ Signalement assigné à l\'entreprise', 'success');
+    try {
+      // Assigner l'entreprise au signalement via l'API
+      const response = await fetchWithAuth(`${API_BASE_URL}/signalements/${assignSignalementId}/entreprise/${selectedEntrepriseId}`, {
+        method: 'PUT',
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'assignation');
+      }
+
+      setSignalements(prev => prev.map(s => s.id === assignSignalementId ? {
+        ...s,
+        surface: surfaceVal,
+        entreprise: entrepriseName,
+        budget: budgetVal,
+      } : s));
+
+      // Also update originalSignalements if matching idSignalement exists
+      setOriginalSignalements(prev => prev.map(o => (o.idSignalement === assignSignalementId ? { ...o, surface: surfaceVal, entreprise: entrepriseName, budget: budgetVal } : o)));
+
+      closeAssignModal();
+      showMessage(`✓ Signalement assigné à ${entrepriseName}${budgetVal != null ? ` — Budget: ${budgetVal.toLocaleString('fr-FR')} Ar` : ''}`, 'success');
+    } catch (error) {
+      console.error('Erreur lors de l\'assignation:', error);
+      showMessage('Erreur lors de l\'assignation à l\'entreprise', 'error');
+    }
   };
 
   // Fonction utilitaire pour afficher un message
@@ -619,68 +664,44 @@ export default function Manager() {
                 {expandedId === signalement.id && (
                   <div className="signalement-details">
                     {editingId === signalement.id ? (
-                      // Formulaire d'édition
-                      <div className="edit-form">
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label>Type</label>
-                            <input
-                              type="text"
-                              value={editFormData.type}
-                              onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value })}
-                            />
+                      // Formulaire d'édition — seul le statut est modifiable
+                      <div className="edit-form" style={{ padding: '16px' }}>
+                        <div className="detail-row">
+                          <div className="detail-item">
+                            <span className="label">Type</span>
+                            <span className="value">{editFormData.type}</span>
                           </div>
-                          <div className="form-group">
-                            <label>Surface (m²)</label>
-                            <input
-                              type="number"
-                              value={editFormData.surface}
-                              onChange={(e) => setEditFormData({ ...editFormData, surface: parseFloat(e.target.value) })}
-                            />
+                          <div className="detail-item">
+                            <span className="label">Surface</span>
+                            <span className="value">{editFormData.surface != null ? `${editFormData.surface} m²` : 'A définir'}</span>
                           </div>
                         </div>
 
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label>Budget (Ar)</label>
-                            <input
-                              type="number"
-                              value={editFormData.budget}
-                              onChange={(e) => setEditFormData({ ...editFormData, budget: parseFloat(e.target.value) })}
-                            />
+                        <div className="detail-row">
+                          <div className="detail-item">
+                            <span className="label">Budget</span>
+                            <span className="value">{editFormData.budget != null ? `${editFormData.budget.toLocaleString('fr-FR')} Ar` : 'A définir'}</span>
                           </div>
-                          <div className="form-group">
-                            <label>Entreprise</label>
-                            <input
-                              type="text"
-                              value={editFormData.entreprise}
-                              onChange={(e) => setEditFormData({ ...editFormData, entreprise: e.target.value })}
-                            />
+                          <div className="detail-item">
+                            <span className="label">Entreprise</span>
+                            <span className="value">{editFormData.entreprise || 'A définir'}</span>
                           </div>
                         </div>
 
-                        <div className="form-group full-width">
-                          <label>Localisation</label>
-                          <input
-                            type="text"
-                            value={editFormData.localisation}
-                            onChange={(e) => setEditFormData({ ...editFormData, localisation: e.target.value })}
-                          />
+                        <div className="detail-full" style={{ marginBottom: '8px' }}>
+                          <span className="label">Localisation</span>
+                          <p className="value" style={{ margin: '4px 0' }}>{editFormData.localisation}</p>
                         </div>
 
-                        <div className="form-group full-width">
-                          <label>Description</label>
-                          <textarea
-                            value={editFormData.description}
-                            onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                            rows="3"
-                          ></textarea>
+                        <div className="detail-full" style={{ marginBottom: '12px' }}>
+                          <span className="label">Description</span>
+                          <p className="value" style={{ margin: '4px 0' }}>{editFormData.description}</p>
                         </div>
 
-                        <div className="form-group full-width">
-                          <label>Statut</label>
+                        <div className="form-group full-width" style={{ marginBottom: '12px' }}>
+                          <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Statut</label>
                           <div className="status-selector">
-                            {['signale', 'en_cours', 'termine', 'rejete'].map(status => (
+                            {['en_attente', 'en_cours', 'resolu', 'rejete'].map(status => (
                               <button
                                 key={status}
                                 className={`status-option ${editFormData.status === status ? 'active' : ''}`}
@@ -692,7 +713,7 @@ export default function Manager() {
                           </div>
                         </div>
 
-                        <div className="form-actions">
+                        <div className="form-actions" style={{ marginTop: '12px' }}>
                           <button
                             className="action-button save"
                             onClick={handleSaveEdit}
@@ -772,7 +793,7 @@ export default function Manager() {
                         <div className="detail-row">
                           <div className="detail-item">
                             <span className="label">Niveau</span>
-                            <span className="value">{niveaux[signalement.id] != null ? niveaux[signalement.id] : 'A définir'}</span>
+                            <span className="value">{signalement.niveau != null ? signalement.niveau : 'A définir'}</span>
                           </div>
                         </div>
 
@@ -793,7 +814,7 @@ export default function Manager() {
                           >
                             Modifier
                           </button>
-                          {niveaux[signalement.id] == null && (
+                          {signalement.niveau == null && (
                             <button
                               className="action-button level"
                               onClick={() => openNiveauModal(signalement.id)}
